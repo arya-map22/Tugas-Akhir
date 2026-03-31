@@ -1,7 +1,8 @@
 from typing import Collection
-import torch
+
 import lightning as L
 from torch.utils.data import DataLoader, Subset, ConcatDataset
+
 from .mortality_dataset import MortalityDataset
 
 

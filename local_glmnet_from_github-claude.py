@@ -2,6 +2,7 @@
 LocalGLMnet — PyTorch Lightning Implementation
 ================================================
 Berdasarkan arsitektur dari Kode R yang menggunakan Keras/TensorFlow.
+Sumber: https://github.com/salvatorescognamiglio/mortality_forecasting_localGLMnet/tree/main#
 
 Arsitektur:
     Input  : (batch, 10, 100)  — mortality rates 10 tahun, 100 kelompok usia
@@ -24,10 +25,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader, random_split
 
-
 # ─────────────────────────────────────────────────────────────
 # 1. Dataset
 # ─────────────────────────────────────────────────────────────
+
 
 class MortalityDataset(Dataset):
     """
@@ -44,8 +45,8 @@ class MortalityDataset(Dataset):
             raise ValueError(
                 f"Jumlah sample x ({x.shape[0]}) dan y ({y.shape[0]}) harus sama"
             )
-        self.x   = x.float()
-        self.y   = y.float()
+        self.x = x.float()
+        self.y = y.float()
         self.ids = ids
 
     def __len__(self) -> int:
@@ -69,6 +70,7 @@ class MortalityDataset(Dataset):
 # ─────────────────────────────────────────────────────────────
 # 2. LocallyConnected2D
 # ─────────────────────────────────────────────────────────────
+
 
 class LocallyConnected2d(nn.Module):
     """
@@ -94,13 +96,13 @@ class LocallyConnected2d(nn.Module):
         activation: nn.Module | None = None,
     ):
         super().__init__()
-        self.in_channels  = in_channels
+        self.in_channels = in_channels
         self.out_channels = out_channels
-        self.kernel_size  = kernel_size
-        self.activation   = activation if activation is not None else nn.Sigmoid()
+        self.kernel_size = kernel_size
+        self.activation = activation if activation is not None else nn.Sigmoid()
 
         H_in, W_in = input_size
-        kH, kW     = kernel_size
+        kH, kW = kernel_size
 
         # Output size (tanpa padding, stride=1)
         self.H_out = H_in - kH + 1
@@ -118,14 +120,18 @@ class LocallyConnected2d(nn.Module):
         batch = x.shape[0]
         kH, kW = self.kernel_size
         out = torch.zeros(
-            batch, self.out_channels, self.H_out, self.W_out,
-            device=x.device, dtype=x.dtype
+            batch,
+            self.out_channels,
+            self.H_out,
+            self.W_out,
+            device=x.device,
+            dtype=x.dtype,
         )
 
         for i in range(self.H_out):
             for j in range(self.W_out):
                 # Patch: (batch, in_channels, kH, kW)
-                patch = x[:, :, i:i + kH, j:j + kW]
+                patch = x[:, :, i : i + kH, j : j + kW]
                 # weight[i,j]: (out_channels, in_channels, kH, kW)
                 w = self.weight[i, j]
                 # Einsum: (batch, out_channels)
@@ -137,6 +143,7 @@ class LocallyConnected2d(nn.Module):
 # ─────────────────────────────────────────────────────────────
 # 3. LocalGLMnet nn.Module
 # ─────────────────────────────────────────────────────────────
+
 
 class LocalGLMnet(nn.Module):
     """
@@ -153,11 +160,11 @@ class LocalGLMnet(nn.Module):
 
     def __init__(
         self,
-        look_back: int   = 10,
-        n_ages: int      = 100,
-        eta: float       = 0.0,
-        alpha: float     = 0.0,
-        pad: int         = 2,
+        look_back: int = 10,
+        n_ages: int = 100,
+        eta: float = 0.0,
+        alpha: float = 0.0,
+        pad: int = 2,
         kernel_size: tuple[int, int] = (5, 5),
     ):
         super().__init__()
@@ -167,26 +174,26 @@ class LocalGLMnet(nn.Module):
         if eta < 0:
             raise ValueError(f"eta harus >= 0, dapat {eta}")
 
-        self.look_back   = look_back
-        self.n_ages      = n_ages
-        self.eta         = eta
-        self.alpha       = alpha
-        self.pad         = pad
+        self.look_back = look_back
+        self.n_ages = n_ages
+        self.eta = eta
+        self.alpha = alpha
+        self.pad = pad
         self.kernel_size = kernel_size
 
         # Input size setelah padding: (look_back + 2*pad, n_ages + 2*pad)
-        H_padded = look_back + 2 * pad   # 10 + 4 = 14
-        W_padded = n_ages   + 2 * pad    # 100 + 4 = 104
+        H_padded = look_back + 2 * pad  # 10 + 4 = 14
+        W_padded = n_ages + 2 * pad  # 100 + 4 = 104
 
         # ── Attention Layer ──────────────────────────────────
         # LocallyConnected2D: in_channels=1, out_channels=1
         # kernel=(5,5) → output size = (14-5+1, 104-5+1) = (10, 100) ✓
         self.locally_connected = LocallyConnected2d(
-            in_channels  = 1,
-            out_channels = 1,
-            input_size   = (H_padded, W_padded),
-            kernel_size  = kernel_size,
-            activation   = nn.Sigmoid(),
+            in_channels=1,
+            out_channels=1,
+            input_size=(H_padded, W_padded),
+            kernel_size=kernel_size,
+            activation=nn.Sigmoid(),
         )
 
         # ── Forecast Layer ───────────────────────────────────
@@ -194,8 +201,7 @@ class LocalGLMnet(nn.Module):
         # Equivalent dengan sum atas dimensi lag → tidak perlu layer, cukup .sum()
         # Tapi untuk faithful reproduction, kita buat sebagai parameter frozen
         self.forecast_weight = nn.Parameter(
-            torch.ones(look_back, 1),
-            requires_grad=False   # frozen, persis seperti di R
+            torch.ones(look_back, 1), requires_grad=False  # frozen, persis seperti di R
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -231,8 +237,8 @@ class LocalGLMnet(nn.Module):
         # L1: eta * alpha * sqrt(interim^2 + eps) summed over lag
         # L2: eta * (1-alpha) * interim^2 summed over lag
         eps = 1e-6
-        l1_penalty = self.eta * self.alpha       * torch.sqrt(interim ** 2 + eps)
-        l2_penalty = self.eta * (1 - self.alpha) * interim ** 2
+        l1_penalty = self.eta * self.alpha * torch.sqrt(interim**2 + eps)
+        l2_penalty = self.eta * (1 - self.alpha) * interim**2
 
         # Sum atas dimensi lag: (batch, 10, 100) → (batch, 1, 100)
         penalty = (l1_penalty + l2_penalty).sum(dim=1, keepdim=True)
@@ -252,15 +258,16 @@ class LocalGLMnet(nn.Module):
             interim       : (batch, 10, 100) — attention coefficients
             decoded_masked: (batch, 10, 100) — contribution values
         """
-        x_padded   = F.pad(x.unsqueeze(1), (self.pad, self.pad, self.pad, self.pad))
-        interim    = self.locally_connected(x_padded).squeeze(1)
-        decoded    = x * interim
+        x_padded = F.pad(x.unsqueeze(1), (self.pad, self.pad, self.pad, self.pad))
+        interim = self.locally_connected(x_padded).squeeze(1)
+        decoded = x * interim
         return interim, decoded
 
 
 # ─────────────────────────────────────────────────────────────
 # 4. PyTorch Lightning Module
 # ─────────────────────────────────────────────────────────────
+
 
 class LocalGLMnetLightning(pl.LightningModule):
     """
@@ -280,14 +287,14 @@ class LocalGLMnetLightning(pl.LightningModule):
 
     def __init__(
         self,
-        look_back: int   = 10,
-        n_ages: int      = 100,
-        eta: float       = 0.0,
-        alpha: float     = 0.0,
-        lr: float        = 1e-3,
+        look_back: int = 10,
+        n_ages: int = 100,
+        eta: float = 0.0,
+        alpha: float = 0.0,
+        lr: float = 1e-3,
         lr_factor: float = 0.90,
         lr_patience: int = 50,
-        lr_min: float    = 5e-5,
+        lr_min: float = 5e-5,
         lr_cooldown: int = 5,
     ):
         super().__init__()
@@ -308,21 +315,21 @@ class LocalGLMnetLightning(pl.LightningModule):
         MSEP Regularized Loss — persis seperti di kode R:
             mean( (y_true[:,0,:] - y_pred[:,0,:])^2 + y_pred[:,1,:] )
         """
-        mse     = (y_true[:, 0, :] - y_pred[:, 0, :]) ** 2
+        mse = (y_true[:, 0, :] - y_pred[:, 0, :]) ** 2
         penalty = y_pred[:, 1, :]
         return (mse + penalty).mean()
 
     def training_step(self, batch, batch_idx):
         x, y = batch[0], batch[1]
         y_pred = self(x)
-        loss   = self._msep_loss(y_pred, y)
+        loss = self._msep_loss(y_pred, y)
         self.log("train_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        x, y   = batch[0], batch[1]
+        x, y = batch[0], batch[1]
         y_pred = self(x)
-        loss   = self._msep_loss(y_pred, y)
+        loss = self._msep_loss(y_pred, y)
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         return loss
 
@@ -333,19 +340,19 @@ class LocalGLMnetLightning(pl.LightningModule):
         # ReduceLROnPlateau — equivalent dengan callback_reduce_lr_on_plateau di R
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
-            mode      = "min",
-            factor    = self.hparams.lr_factor,
-            patience  = self.hparams.lr_patience,
-            min_lr    = self.hparams.lr_min,
-            cooldown  = self.hparams.lr_cooldown,
+            mode="min",
+            factor=self.hparams.lr_factor,
+            patience=self.hparams.lr_patience,
+            min_lr=self.hparams.lr_min,
+            cooldown=self.hparams.lr_cooldown,
         )
 
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
                 "scheduler": scheduler,
-                "monitor"  : "val_loss",   # pantau val_loss untuk plateau
-            }
+                "monitor": "val_loss",  # pantau val_loss untuk plateau
+            },
         }
 
     def predict_attention(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
@@ -359,17 +366,18 @@ class LocalGLMnetLightning(pl.LightningModule):
 # 5. Training Script
 # ─────────────────────────────────────────────────────────────
 
+
 def train(
     x_train: torch.Tensor,
     y_train: torch.Tensor,
-    ids: list | None         = None,
-    eta: float               = 0.0,
-    alpha: float             = 0.0,
-    n_epochs: int            = 500,
-    batch_size: int          = 16,
-    val_split: float         = 0.05,
-    checkpoint_dir: str      = "checkpoints",
-    device: str              = "auto",
+    ids: list | None = None,
+    eta: float = 0.0,
+    alpha: float = 0.0,
+    n_epochs: int = 500,
+    batch_size: int = 16,
+    val_split: float = 0.05,
+    checkpoint_dir: str = "checkpoints",
+    device: str = "auto",
 ) -> LocalGLMnetLightning:
     """
     Melatih LocalGLMnet.
@@ -390,23 +398,23 @@ def train(
         model yang sudah dilatih dengan best weights
     """
     # ── Dataset & DataLoader ─────────────────────────────────
-    dataset  = MortalityDataset(x_train, y_train, ids)
-    n_val    = max(1, int(len(dataset) * val_split))
-    n_train  = len(dataset) - n_val
+    dataset = MortalityDataset(x_train, y_train, ids)
+    n_val = max(1, int(len(dataset) * val_split))
+    n_train = len(dataset) - n_val
 
     train_ds, val_ds = random_split(dataset, [n_train, n_val])
 
     train_dl = DataLoader(
         train_ds,
-        batch_size  = batch_size,
-        shuffle     = True,
-        collate_fn  = MortalityDataset.collate_fn,
+        batch_size=batch_size,
+        shuffle=True,
+        collate_fn=MortalityDataset.collate_fn,
     )
     val_dl = DataLoader(
         val_ds,
-        batch_size  = batch_size,
-        shuffle     = False,
-        collate_fn  = MortalityDataset.collate_fn,
+        batch_size=batch_size,
+        shuffle=False,
+        collate_fn=MortalityDataset.collate_fn,
     )
 
     # ── Model ────────────────────────────────────────────────
@@ -415,20 +423,20 @@ def train(
     # ── Callbacks ────────────────────────────────────────────
     # ModelCheckpoint — equivalent dengan callback_model_checkpoint di R
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
-        dirpath      = checkpoint_dir,
-        filename     = "best-{epoch:03d}-{val_loss:.4f}",
-        monitor      = "val_loss",
-        mode         = "min",
-        save_best_only = True,
-        verbose      = True,
+        dirpath=checkpoint_dir,
+        filename="best-{epoch:03d}-{val_loss:.4f}",
+        monitor="val_loss",
+        mode="min",
+        save_best_only=True,
+        verbose=True,
     )
 
     # ── Trainer ──────────────────────────────────────────────
     trainer = pl.Trainer(
-        max_epochs        = n_epochs,
-        accelerator       = device,
-        callbacks         = [checkpoint_callback],
-        log_every_n_steps = 1,
+        max_epochs=n_epochs,
+        accelerator=device,
+        callbacks=[checkpoint_callback],
+        log_every_n_steps=1,
     )
 
     trainer.fit(model, train_dl, val_dl)
@@ -449,29 +457,29 @@ if __name__ == "__main__":
     torch.manual_seed(42)
 
     # Simulasi data — ganti dengan data asli
-    n_sample  = 200
+    n_sample = 200
     look_back = 10
-    n_ages    = 100
+    n_ages = 100
 
-    x_train = torch.rand(n_sample, look_back, n_ages) * 0.1   # mortality rates kecil
+    x_train = torch.rand(n_sample, look_back, n_ages) * 0.1  # mortality rates kecil
     y_train = torch.rand(n_sample, 1, n_ages) * 0.1
 
     # Training
     trained_model = train(
-        x_train       = x_train,
-        y_train       = y_train,
-        eta           = 0.0,    # ganti sesuai kebutuhan
-        alpha         = 0.0,    # 0=Ridge, 1=Lasso
-        n_epochs      = 10,     # ganti ke 500 untuk training penuh
-        batch_size    = 16,
-        val_split     = 0.05,
-        checkpoint_dir= "localGLMnet_checkpoints",
+        x_train=x_train,
+        y_train=y_train,
+        eta=0.0,  # ganti sesuai kebutuhan
+        alpha=0.0,  # 0=Ridge, 1=Lasso
+        n_epochs=10,  # ganti ke 500 untuk training penuh
+        batch_size=16,
+        val_split=0.05,
+        checkpoint_dir="localGLMnet_checkpoints",
     )
 
     # Analisis attention coefficients
     interim, decoded_masked = trained_model.predict_attention(x_train)
 
-    print(f"Attention coefficients shape : {interim.shape}")         # (200, 10, 100)
+    print(f"Attention coefficients shape : {interim.shape}")  # (200, 10, 100)
     print(f"Contribution values shape    : {decoded_masked.shape}")  # (200, 10, 100)
 
     # Untuk plot — equivalent dengan ggplot di kode R
