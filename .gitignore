@@ -207,7 +207,8 @@ marimo/_lsp/
 __marimo__/
 
 # Lightning logs
-lightning_logs/
+logs_tensorboard/
+logs_csv/
 
 # Model checkpoints
 best_model_checkpoints/

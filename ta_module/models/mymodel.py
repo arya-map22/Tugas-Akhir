@@ -21,6 +21,7 @@ class MyModel(L.LightningModule):
         lr_scheduler_factory: Callable[
             [torch.optim.Optimizer], torch.optim.lr_scheduler.LRScheduler
         ] = None,
+        loss_log_scale: int = 0,
     ):
         super().__init__()
         # Semua argumen dalam __init__ yang bukan tipe primitif harus ignore dalam save_hyperparameters
@@ -35,6 +36,10 @@ class MyModel(L.LightningModule):
                 "lr_scheduler_factory",
             ]
         )
+
+        # Hyperparameter (statis)
+        # Digunakan untuk memberikan tampilan loss yang lebih readable (loss x 10^precision)
+        self.log_loss_scale = loss_log_scale
 
         # Model utama yang diwrap oleh LightningModule (dinamis)
         self.model = model
@@ -85,6 +90,15 @@ class MyModel(L.LightningModule):
             train_loss,
             on_step=True,
             on_epoch=True,
+        )
+
+        # Tampilkan loss yang sudah discaled untuk memudahkan pengamatan
+        train_loss_scaled = train_loss * 10**self.log_loss_scale
+        self.log(
+            f"train_loss_scaled (x10^{self.log_loss_scale})",
+            train_loss_scaled,
+            on_step=True,
+            on_epoch=True,
             prog_bar=True,
         )
 
@@ -101,6 +115,15 @@ class MyModel(L.LightningModule):
             val_loss,
             on_step=True,
             on_epoch=True,
+        )
+
+        # Tampilkan loss yang sudah discaled untuk memudahkan pengamatan
+        val_loss_scaled = val_loss * 10**self.log_loss_scale
+        self.log(
+            f"val_loss_scaled (x10^{self.log_loss_scale})",
+            val_loss_scaled,
+            on_step=True,
+            on_epoch=True,
             prog_bar=True,
         )
 
@@ -114,6 +137,16 @@ class MyModel(L.LightningModule):
         self.log(
             f"test_loss",
             test_loss,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+        )
+
+        # Tampilkan loss yang sudah discaled untuk memudahkan pengamatan
+        test_loss_scaled = test_loss * 10**self.log_loss_scale
+        self.log(
+            f"test_loss_scaled (x10^{self.log_loss_scale})",
+            test_loss_scaled,
             on_step=True,
             on_epoch=True,
             prog_bar=True,
