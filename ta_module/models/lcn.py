@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import torch
-
 from math import ceil, floor
 from typing import Callable
-from torch import nn, Tensor
+
+import torch
+from torch import Tensor, nn
 
 
 class LocallyConnected2D(nn.Module):

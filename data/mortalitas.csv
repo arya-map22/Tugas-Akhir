@@ -1,4 +1,4 @@
-﻿Year,Sex,Age,Value
+﻿year,sex,age,mortality_rate
 1950,Male,0,0.22851481
 1950,Female,0,0.18515755
 1950,Male,1,0.06934878

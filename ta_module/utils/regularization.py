@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Callable, Iterator, Collection
+from typing import Callable, Collection, Iterator
 
 import torch
-from torch import nn, Tensor
+from torch import Tensor, nn
 from torch.nn import Parameter
 
 

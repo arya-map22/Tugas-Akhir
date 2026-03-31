@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import torch
-
 from typing import Callable
-from torch import nn, Tensor
+
+import torch
+from torch import Tensor, nn
 from torch.distributions.transforms import Transform
 
 

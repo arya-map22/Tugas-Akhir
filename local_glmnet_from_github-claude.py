@@ -23,7 +23,7 @@ import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import DataLoader, Dataset, random_split
 
 # ─────────────────────────────────────────────────────────────
 # 1. Dataset

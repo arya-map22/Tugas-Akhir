@@ -1,6 +1,6 @@
+from torch import Tensor
 from torch.distributions.constraints import real
 from torch.distributions.transforms import Transform
-from torch import Tensor
 
 
 class IdentityTransform(Transform):

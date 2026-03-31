@@ -1,9 +1,8 @@
 from typing import Callable, Iterator
 
-import torch
 import lightning as L
-
-from torch import nn, Tensor
+import torch
+from torch import Tensor, nn
 
 
 class MyModel(L.LightningModule):
