@@ -1,8 +1,7 @@
-from typing import Collection
-
 import lightning as L
-from torch.utils.data import DataLoader, Subset, ConcatDataset
 
+from typing import Collection
+from torch.utils.data import DataLoader, Subset, ConcatDataset
 from .mortality_dataset import MortalityDataset
 
 
@@ -18,7 +17,7 @@ class MortalityDataModule(L.LightningDataModule):
         self.mortality_datasets = list(mortality_datasets)
         n_datasets = [len(d) for d in self.mortality_datasets]
 
-        assert all(n >= 3 for n in n_datasets), "Each dataset must have >= 3 samples"
+        assert all(n >= 3 for n in n_datasets), "Setiap dataset harus punya >= 3 sample"
 
         # ========================
         # Batch size handling
@@ -44,9 +43,9 @@ class MortalityDataModule(L.LightningDataModule):
             self.val_split = 0.1
             self.test_split = 0.1
         else:
-            assert all(x >= 0 for x in splits), "splits must be >= 0"
-            assert splits[0] > 0, "train_split must be > 0"
-            assert sum(splits) == 1, "splits must sum to 1"
+            assert all(x >= 0 for x in splits), "Senua split harus >= 0"
+            assert splits[0] > 0, "train_split harus > 0"
+            assert sum(splits) == 1, "penjumlahan dari splits harus = 1"
 
             self.train_split = splits[0]
             self.val_split = splits[1]
@@ -54,13 +53,15 @@ class MortalityDataModule(L.LightningDataModule):
 
         assert (
             self.train_split > self.test_split and self.train_split > self.val_split
-        ), "train split must be largest"
+        ), "train_split harus yang terbesar"
 
+        # Subset dari dataset yang didefinisikan pada saat training (method setup)
         self.train_subsets = None
         self.val_subsets = None
         self.test_subsets = None
 
     def setup(self, stage: str = None):
+        # Untuk menyimpan banyaknya sample dari masing-masing split
         train_sizes, val_sizes, test_sizes = [], [], []
 
         for dataset in self.mortality_datasets:

@@ -1,5 +1,6 @@
 from torch.distributions.constraints import real
 from torch.distributions.transforms import Transform
+from torch import Tensor
 
 
 class IdentityTransform(Transform):
@@ -7,8 +8,8 @@ class IdentityTransform(Transform):
     codomain = real
     bijective = True
 
-    def _call(self, x):
+    def _call(self, x: Tensor) -> Tensor:
         return x
 
-    def _inverse(self, y):
+    def _inverse(self, y: Tensor) -> Tensor:
         return y

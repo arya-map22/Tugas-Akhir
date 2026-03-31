@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import torch
+
 from math import ceil, floor
 from typing import Callable
-
-import torch
 from torch import nn, Tensor
 
 
@@ -12,7 +12,7 @@ class LocallyConnected2D(nn.Module):
         self,
         input_size: int | tuple[int, int],
         kernel_size: int,
-        activation_fn: nn.Module,
+        activation_fn: nn.Module | Callable[[Tensor], Tensor],
         stride: int = 1,
         dilation: int = 1,
         zero_padding: bool = False,
@@ -20,6 +20,7 @@ class LocallyConnected2D(nn.Module):
     ):
         super().__init__()
 
+        # Hyperparameter (statis)
         self.stride = stride
         self.dilation = dilation
         self.kernel_size = kernel_size
@@ -33,6 +34,7 @@ class LocallyConnected2D(nn.Module):
 
         self.pad = (kernel_size - 1) / 2 if zero_padding else 0
 
+        # Dimensi output
         self.H_out: int = floor(
             (self.H_in + 2 * self.pad - dilation * (kernel_size - 1) - 1) / stride + 1
         )
@@ -40,12 +42,12 @@ class LocallyConnected2D(nn.Module):
             (self.W_in + 2 * self.pad - dilation * (kernel_size - 1) - 1) / stride + 1
         )
 
+        # Parameter model (dinamis)
         self.weight = nn.Parameter(
             data=torch.rand(
                 self.H_out, self.W_out, kernel_size, kernel_size, dtype=torch.float32
             )
         )
-
         if bias:
             self.bias = nn.Parameter(
                 data=torch.rand(self.H_out, self.W_out, dtype=torch.float32)
@@ -53,7 +55,7 @@ class LocallyConnected2D(nn.Module):
         else:
             self.register_parameter("bias", None)
 
-    def forward(self, x: Tensor):
+    def forward(self, x: Tensor) -> Tensor:
         unbatches = x.dim() == 2
         if unbatches:
             x = x.unsqueeze(0)

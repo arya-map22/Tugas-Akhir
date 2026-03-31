@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+
 from pandas import DataFrame
 from pandas.api.types import is_datetime64_any_dtype
 from torch.utils.data import Dataset
@@ -15,12 +16,12 @@ class MortalityDataset(Dataset):
 
     def __init__(
         self,
-        lookback: int,
-        horizon: int,
         df: DataFrame,
         mortality_col: str,
         age_col: str,
         year_col: str,
+        lookback: int,
+        horizon: int,
     ):
         if lookback <= 0:
             raise ValueError("lookback harus > 0")

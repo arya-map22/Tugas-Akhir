@@ -1,7 +1,8 @@
 from typing import Callable, Iterator
 
-import lightning as L
 import torch
+import lightning as L
+
 from torch import nn, Tensor
 
 
@@ -13,8 +14,10 @@ class MyModel(L.LightningModule):
         train_loss: nn.Module | Callable[[Tensor, Tensor], Tensor],
         eval_loss: nn.Module | Callable[[Tensor, Tensor], Tensor],
         # Pakai factory karena optimizer dan lr_scheduler harus dibuat di dalam configure_optimizers
-        # Kalau passing objek jadi nanti params yang ketrack jadi ambigu (bisa jadi tidak sesuai params model)
+        # Kalau passing objek jadi nanti params yang ketrack jadi ambigu
+        # (bisa jadi tidak sesuai params model di model yang dibuat)
         optimizer_factory: Callable[[Iterator[nn.Parameter]], torch.optim.Optimizer],
+        # Regularization untuk ditambahkan pada loss saat train
         regularization_loss: nn.Module | Callable[[Tensor, Tensor], Tensor] = None,
         lr_scheduler_factory: Callable[
             [torch.optim.Optimizer], torch.optim.lr_scheduler.LRScheduler
@@ -33,14 +36,23 @@ class MyModel(L.LightningModule):
                 "lr_scheduler_factory",
             ]
         )
+
+        # Model utama yang diwrap oleh LightningModule (dinamis)
         self.model = model
+
+        # Loss pada tahapan train, validation, test
         self.train_loss = train_loss
         self.eval_loss = eval_loss
-        self.optimizer_factory = optimizer_factory
-        self.lr_scheduler_factory = lr_scheduler_factory
+
+        # Loss untuk regularisasi pada proses train
         self.regularization_loss = regularization_loss
 
+        # Factory untuk membuat optimizer dan learning scheduler
+        self.optimizer_factory = optimizer_factory
+        self.lr_scheduler_factory = lr_scheduler_factory
+
     def configure_optimizers(self):
+        # optimizer pasti tracking params pada objek model ini
         optimizer = self.optimizer_factory(self.model.parameters())
         if self.lr_scheduler_factory is not None:
             return {
@@ -60,18 +72,18 @@ class MyModel(L.LightningModule):
         total_loss = 0.0
 
         # loss murni tanpa regularisasi
-        loss = self.train_loss(y_hat, y)
-        total_loss += loss
+        train_loss = self.train_loss(y_hat, y)
+        total_loss += train_loss
 
         if self.regularization_loss is not None:
-            # loss dengan regularisasi -> untuk optimisasi
+            # loss dengan regularisasi -> untuk optimisasi parameter
             total_loss += self.regularization_loss(y_hat, y)
 
-        # Log hanya pada loss murni agar dapat diinterpretasi karena loss hanya dipengaruhi oleh data
+        # Log hanya pada loss murni agar dapat diinterpretasi karena loss murni hanya dipengaruhi oleh data
         # Juga agar train_loss dan val_loss dapat dibandingkan untuk deteksi overfit
         self.log(
             f"train_loss",
-            loss,
+            train_loss,
             on_step=True,
             on_epoch=True,
             prog_bar=True,
@@ -83,29 +95,29 @@ class MyModel(L.LightningModule):
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         x, y = batch
         y_hat = self.model(x)
-        loss = self.eval_loss(y_hat, y)
+        val_loss = self.eval_loss(y_hat, y)
 
         self.log(
             f"val_loss",
-            loss,
+            val_loss,
             on_step=True,
             on_epoch=True,
             prog_bar=True,
         )
 
-        return loss
+        return val_loss
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):
         x, y = batch
         y_hat = self.model(x)
-        loss = self.eval_loss(y_hat, y)
+        test_loss = self.eval_loss(y_hat, y)
 
         self.log(
             f"test_loss",
-            loss,
+            test_loss,
             on_step=True,
             on_epoch=True,
             prog_bar=True,
         )
 
-        return loss
+        return test_loss
