@@ -208,3 +208,6 @@ __marimo__/
 
 # Lightning logs
 lightning_logs/
+
+# IDE files
+.idea/

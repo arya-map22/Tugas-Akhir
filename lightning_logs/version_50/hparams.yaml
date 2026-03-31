@@ -1,2 +1,0 @@
-lr_scheduler_factory: !!python/name:__main__.create_reduce_lr_on_plateu_scheduler ''
-optimizer_factory: !!python/name:__main__.create_nadam_optimizer ''
