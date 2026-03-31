@@ -209,5 +209,11 @@ __marimo__/
 # Lightning logs
 lightning_logs/
 
+# Model checkpoints
+best_model_checkpoints/
+
 # IDE files
 .idea/
+
+# All hidden folders
+.*/
