@@ -1,0 +1,111 @@
+from typing import Callable, Iterator
+
+import lightning as L
+import torch
+from torch import nn, Tensor
+
+
+class MyModel(L.LightningModule):
+
+    def __init__(
+        self,
+        model: nn.Module,
+        train_loss: nn.Module | Callable[[Tensor, Tensor], Tensor],
+        eval_loss: nn.Module | Callable[[Tensor, Tensor], Tensor],
+        # Pakai factory karena optimizer dan lr_scheduler harus dibuat di dalam configure_optimizers
+        # Kalau passing objek jadi nanti params yang ketrack jadi ambigu (bisa jadi tidak sesuai params model)
+        optimizer_factory: Callable[[Iterator[nn.Parameter]], torch.optim.Optimizer],
+        regularization_loss: nn.Module | Callable[[Tensor, Tensor], Tensor] = None,
+        lr_scheduler_factory: Callable[
+            [torch.optim.Optimizer], torch.optim.lr_scheduler.LRScheduler
+        ] = None,
+    ):
+        super().__init__()
+        # Semua argumen dalam __init__ yang bukan tipe primitif harus ignore dalam save_hyperparameters
+        # agar load_from_checkpoint berfungsi
+        self.save_hyperparameters(
+            ignore=[
+                "model",
+                "train_loss",
+                "eval_loss",
+                "regularization_loss",
+                "optimizer_factory",
+                "lr_scheduler_factory",
+            ]
+        )
+        self.model = model
+        self.train_loss = train_loss
+        self.eval_loss = eval_loss
+        self.optimizer_factory = optimizer_factory
+        self.lr_scheduler_factory = lr_scheduler_factory
+        self.regularization_loss = regularization_loss
+
+    def configure_optimizers(self):
+        optimizer = self.optimizer_factory(self.model.parameters())
+        if self.lr_scheduler_factory is not None:
+            return {
+                "optimizer": optimizer,
+                "lr_scheduler": {
+                    "scheduler": self.lr_scheduler_factory(optimizer),
+                    "monitor": "val_loss",
+                },
+            }
+        else:
+            return optimizer
+
+    def training_step(self, batch, batch_idx, dataloader_idx=0):
+        x, y = batch
+        y_hat = self.model(x)
+
+        total_loss = 0.0
+
+        # loss murni tanpa regularisasi
+        loss = self.train_loss(y_hat, y)
+        total_loss += loss
+
+        if self.regularization_loss is not None:
+            # loss dengan regularisasi -> untuk optimisasi
+            total_loss += self.regularization_loss(y_hat, y)
+
+        # Log hanya pada loss murni agar dapat diinterpretasi karena loss hanya dipengaruhi oleh data
+        # Juga agar train_loss dan val_loss dapat dibandingkan untuk deteksi overfit
+        self.log(
+            f"train_loss",
+            loss,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+        )
+
+        # Yang dipakai untuk optimisasi adalah total_loss
+        return total_loss
+
+    def validation_step(self, batch, batch_idx, dataloader_idx=0):
+        x, y = batch
+        y_hat = self.model(x)
+        loss = self.eval_loss(y_hat, y)
+
+        self.log(
+            f"val_loss",
+            loss,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+        )
+
+        return loss
+
+    def test_step(self, batch, batch_idx, dataloader_idx=0):
+        x, y = batch
+        y_hat = self.model(x)
+        loss = self.eval_loss(y_hat, y)
+
+        self.log(
+            f"test_loss",
+            loss,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+        )
+
+        return loss
