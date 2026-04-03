@@ -148,12 +148,3 @@ class MortalityDataModule(L.LightningDataModule):
         return self._build_dataloaders(
             self.test_subsets, self.test_batch_size, shuffle=False
         )
-
-    def train_dataset(self):
-        return self.train_subsets
-
-    def val_dataset(self):
-        return self.val_subsets
-
-    def test_dataset(self):
-        return self.test_subsets

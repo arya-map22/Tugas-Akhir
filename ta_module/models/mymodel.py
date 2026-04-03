@@ -6,7 +6,6 @@ from torch import Tensor, nn
 
 
 class MyModel(L.LightningModule):
-
     def __init__(
         self,
         model: nn.Module,
@@ -96,10 +95,17 @@ class MyModel(L.LightningModule):
         train_loss_scaled = train_loss * 10**self.log_loss_scale
         self.log(
             f"train_loss_scaled (x10^{self.log_loss_scale})",
-            train_loss_scaled,
-            on_step=True,
             on_epoch=True,
+            on_step=True,
             prog_bar=True,
+        )
+
+        # Grouping loss untuk membandingkan train_loss dan val_loss di tensorboard
+        # hanya log on_epoch karena val_loss hanya dihitung per epoch
+        self.log(
+            f"training_step/loss/train_loss",
+            train_loss,
+            on_epoch=True,
         )
 
         # Yang dipakai untuk optimisasi adalah total_loss
@@ -125,6 +131,13 @@ class MyModel(L.LightningModule):
             on_step=True,
             on_epoch=True,
             prog_bar=True,
+        )
+
+        # Grouping loss untuk membandingkan train_loss dan val_loss di tensorboard
+        self.log(
+            f"training_step/loss/val_loss",
+            val_loss,
+            on_epoch=True,
         )
 
         return val_loss

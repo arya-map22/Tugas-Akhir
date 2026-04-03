@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import numpy as np
 import torch
 
 from pandas import DataFrame
-from pandas.api.types import is_datetime64_any_dtype
+from torch import Tensor
 from torch.utils.data import Dataset
 
 
@@ -16,33 +18,18 @@ class MortalityDataset(Dataset):
 
     def __init__(
         self,
-        df: DataFrame,
-        mortality_col: str,
-        age_col: str,
-        year_col: str,
+        mortality_matrix: DataFrame,
         lookback: int,
         horizon: int,
     ):
-        if lookback <= 0:
-            raise ValueError("lookback harus > 0")
-        if horizon <= 0:
-            raise ValueError("horizon harus > 0")
-        if df.isna().any(axis=None):
-            raise ValueError("Terdapat missing value pada df")
-        if not is_datetime64_any_dtype(df[year_col]):
-            raise TypeError("df[year_col] harus tipe datetime-like")
-
-        self.df_pivoted = df.pivot(
-            columns=age_col, index=year_col, values=mortality_col
-        )
-
+        self.mortality_matrix = mortality_matrix
         self.lookback = lookback
         self.horizon = horizon
 
     def __len__(self):
-        return len(self.df_pivoted) - self.lookback - self.horizon + 1
+        return len(self.mortality_matrix) - self.lookback - self.horizon + 1
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self, idx: int) -> tuple[Tensor, Tensor]:
         n = self.__len__()
         l = self.lookback
         h = self.horizon
@@ -65,7 +52,18 @@ class MortalityDataset(Dataset):
             else np.arange(n + (idx + 1) * l - 1, n + (idx + 1) * l + h - 1)
         )
 
-        x = self.df_pivoted.iloc[x_ind, :].to_numpy(copy=True, dtype=np.float32)
-        y = self.df_pivoted.iloc[y_ind, :].to_numpy(copy=True, dtype=np.float32)
+        x = self.mortality_matrix.iloc[x_ind, :].to_numpy(copy=True, dtype=np.float32)
+        y = self.mortality_matrix.iloc[y_ind, :].to_numpy(copy=True, dtype=np.float32)
 
         return torch.from_numpy(x), torch.from_numpy(y)
+
+    @classmethod
+    def factory(cls, lookback: int, horizon: int):
+        def create(mortality_matrix: DataFrame) -> MortalityDataset:
+            return cls(
+                mortality_matrix=mortality_matrix,
+                lookback=lookback,
+                horizon=horizon,
+            )
+
+        return create
