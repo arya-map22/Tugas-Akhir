@@ -56,9 +56,7 @@ class LocallyConnected2D(nn.Module):
             self.register_parameter("bias", None)
 
     def forward(self, x: Tensor) -> Tensor:
-        unbatches = x.dim() == 2
-        if unbatches:
-            x = x.unsqueeze(0)
+        assert x.dim() == 3
 
         N = x.size(0)
         k = self.kernel_size
@@ -89,9 +87,6 @@ class LocallyConnected2D(nn.Module):
         if self.bias is not None:
             # Ubah dimensi bias menjadi (N, H_out, W_out) sebelum dijumlahkan
             y = y + self.bias.unsqueeze(0).expand(N, -1, -1)
-
-        if unbatches:
-            y = y.squeeze(0)
 
         return self.activation_fn(y)
 

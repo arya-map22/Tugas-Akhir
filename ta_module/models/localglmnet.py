@@ -32,10 +32,8 @@ class LocalGLMnet(nn.Module):
             self.register_parameter("bias", None)
 
     def forward(self, x: Tensor) -> Tensor:
-        # Jika x unbatches (2D) ubah ke 3D dengan dimensi (N = 1, H, W)
-        unbatches = x.dim() == 2
-        if unbatches:
-            x = x.unsqueeze(0)
+        # x harus batched
+        assert x.dim() == 3
 
         if x.size()[1:] != self.input_size:
             raise ValueError(
@@ -61,10 +59,6 @@ class LocalGLMnet(nn.Module):
 
         # Ubah dimensi y menjadi (N, 1, W) agar konsisten dengan MortalityDataset
         y = y.unsqueeze(1)
-
-        # Jika x unbactches (2D), kembalikan y ke 2D dengan dimensi (1, W)
-        if unbatches:
-            y = y.squeeze(0)
 
         return y
 

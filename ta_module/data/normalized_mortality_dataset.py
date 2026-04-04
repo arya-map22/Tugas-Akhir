@@ -26,9 +26,9 @@ class NormalizedMortalityDataset(MortalityDataset):
     def __getitem__(self, idx: int) -> tuple[Tensor, Tensor]:
         x, y = super().__getitem__(idx)
         x_normalized = (x - self.mean) / self.std
+        y_normalized = (y - self.mean) / self.std
 
-        # Hanya normalkan x
-        return x_normalized, y
+        return x_normalized, y_normalized
 
     @classmethod
     def factory(
