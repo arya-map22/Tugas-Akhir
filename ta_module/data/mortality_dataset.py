@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 import torch
-
 from pandas import DataFrame
 from torch import Tensor
 from torch.utils.data import Dataset
@@ -27,7 +26,10 @@ class MortalityDataset(Dataset):
         self.horizon = horizon
 
     def __len__(self):
-        return len(self.mortality_matrix) - self.lookback - self.horizon + 1
+        n = len(self.mortality_matrix) - self.lookback - self.horizon + 1
+        assert n >= 0
+
+        return n
 
     def __getitem__(self, idx: int) -> tuple[Tensor, Tensor]:
         n = self.__len__()
@@ -35,10 +37,10 @@ class MortalityDataset(Dataset):
         h = self.horizon
 
         if idx > 0 and idx >= n:
-            raise ValueError(f"idx positif hanya valid di [{0}, {n})")
+            raise IndexError(f"idx positif hanya valid di [{0}, {n})")
 
         if idx < 0 and -idx > n:
-            raise ValueError(f"idx negatif hanya valid di [{-n}, 0)")
+            raise IndexError(f"idx negatif hanya valid di [{-n}, 0)")
 
         x_ind = (
             np.arange(idx, idx + l)

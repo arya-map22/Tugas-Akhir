@@ -15,11 +15,12 @@ def get_train_val_test_split(
 
     index = df.index
     n = len(index)
-    train_size = int(train_split * len(index))
-    val_size = int(val_split * len(index))
-    test_size = int(test_split * len(index))
 
-    remainder = n - train_size + val_size + test_size
+    train_size = int(train_split * n)
+    val_size = int(val_split * n)
+    test_size = int(test_split * n)
+
+    remainder = n - (train_size + val_size + test_size)
     if remainder > 0:
         if val_size == 0 and val_split > 0:
             val_size += 1
@@ -32,11 +33,11 @@ def get_train_val_test_split(
         train_size += remainder
         remainder -= remainder
 
-    assert n == train_size + val_size + test_size
+    assert n == (train_size + val_size + test_size)
     assert remainder == 0
 
     train_ind = index[:train_size]
     val_ind = index[train_size : train_size + val_size]
-    test_ind = index[train_size + val_size + test_size :]
+    test_ind = index[train_size + val_size :]
 
     return df.loc[train_ind, :], df.loc[val_ind, :], df.loc[test_ind, :]

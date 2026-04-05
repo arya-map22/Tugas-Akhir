@@ -23,9 +23,7 @@ class RegularizationLoss(nn.Module):
         l1_epsilon: float = 1e-6,
     ):
         super().__init__()
-        assert (
-            eta > 0 and alfa > 0 and l1_epsilon > 0
-        ), "Semua parameter regularisasi harus positif"
+        assert eta >= 0 and alfa >= 0 and l1_epsilon >= 0
         assert 0 <= alfa <= 1, "alfa harus di range [0, 1]"
 
         self.eta = eta

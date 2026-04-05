@@ -482,7 +482,7 @@ if __name__ == "__main__":
     print(f"Attention coefficients shape : {interim.shape}")  # (200, 10, 100)
     print(f"Contribution values shape    : {decoded_masked.shape}")  # (200, 10, 100)
 
-    # Untuk plot — equivalent dengan ggplot di kode R
+    # Untuk plots — equivalent dengan ggplot di kode R
     # import pandas as pd
     # import matplotlib.pyplot as plt
     #

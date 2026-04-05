@@ -1,9 +1,9 @@
+from typing import Callable, Collection
+
 import torch
 import torch.nn as nn
-
-from typing import Callable, Collection
-from torch import Tensor
 from lightning import LightningModule
+from torch import Tensor
 
 
 class EnsembleLocalGLMNet(nn.Module):
@@ -61,7 +61,7 @@ class EnsembleLocalGLMnetLightning(LightningModule):
         self, batch: Tensor, batch_idx: int, dataloader_idx: int = 0
     ) -> Tensor:
         x, y = batch
-        y_hat = self.forward(x)
+        y_hat = self.model(x)
         val_loss = self.eval_loss(y, y_hat)
         self.log("val_loss", val_loss, on_step=False, on_epoch=True, prog_bar=True)
 
@@ -71,7 +71,7 @@ class EnsembleLocalGLMnetLightning(LightningModule):
         self, batch: Tensor, batch_idx: int, dataloader_idx: int = 0
     ) -> Tensor:
         x, y = batch
-        y_hat = self.forward(x)
+        y_hat = self.model(x)
         test_loss = self.eval_loss(y, y_hat)
         self.log("test_loss", test_loss, on_step=False, on_epoch=True, prog_bar=True)
 

@@ -1,0 +1,49 @@
+mode: "train"
+
+seed: 42
+
+split:
+  train: 0.8
+  validation: 0.1
+  test: 0.1
+
+data:
+  mortalitas:
+    year_col: "year"
+    date_format: "%Y"
+    age_col: "age"
+    sex_col: "sex"
+    mortality_col: "mortality_rate"
+
+  bi_rate:
+    date_col: "date"
+    date_format: "%d-%m-%y"
+
+dataset:
+  lookback: 10
+  horizon: 1
+
+training:
+  batch_size: 16
+  epochs: 500
+  optimizer:
+    learning_rate: 1e-3
+
+  regularization:
+    eta: 1e-5
+    alfa: 1
+
+tuning:
+  eta_candidates: [1e-6, 5e-6, 1e-5, 5e-5, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 0]
+
+model:
+  num_ensembles: 10
+  localglmnet:
+    bias: true
+
+  lcn:
+    kernel_size: 5
+    stride: 1
+    dilation: 1
+    zero_padding: true
+    bias: true

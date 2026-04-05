@@ -1,6 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
 import seaborn as sns
 from pandas import DataFrame, Timestamp
 
@@ -13,12 +14,12 @@ def plot_usia_vs_tahun(
     mortality_col: str,
     age_start: int,
     age_end: int,
-    plot_dir: Path,
+    plots_dir: Path,
 ):
     assert age_col in mortalitas_df.columns, "age_col harus ada di dalam mortalitas_df"
 
     plot_name = f"usia vs tahun ({age_start}-{age_end})"
-    file_path = plot_dir / f"{plot_name}.png"
+    file_path = plots_dir / f"{plot_name}.png"
     if not file_path.exists():
         mask = (mortalitas_df[age_col] >= age_start) & (
             mortalitas_df[age_col] <= age_end
@@ -51,11 +52,12 @@ def plot_tahun_vs_usia(
     sex_col: str,
     mortality_col: str,
     year_start: str | datetime,
-    year_end: str,
-    plot_dir: Path,
+    year_end: str | datetime,
+    plots_dir: Path,
 ):
     plot_name = f"tahun vs usia ({year_start}-{year_end})"
-    file_path = plot_dir / f"{plot_name}.png"
+    file_path = plots_dir / f"{plot_name}.png"
+
     if not file_path.exists():
         year_start_dt = (
             Timestamp(
@@ -64,7 +66,11 @@ def plot_tahun_vs_usia(
                 day=1,
             )
             if not isinstance(year_start, datetime)
-            else year_start.year
+            else Timestamp(
+                year=year_start.year,
+                month=1,
+                day=1,
+            )
         )
 
         year_end_dt = (
@@ -74,11 +80,20 @@ def plot_tahun_vs_usia(
                 day=1,
             )
             if not isinstance(year_end, datetime)
-            else year_end.year
+            else Timestamp(
+                year=year_end.year,
+                month=1,
+                day=1,
+            )
         )
 
         df = mortalitas_df.copy()
         df["Year Only"] = df[year_col].dt.year
+
+        assert not pd.isna(
+            year_start_dt
+        ), "year_start harus bisa dikonversi ke datetime"
+        assert not pd.isna(year_end_dt), "year_end harus bisa dikonversi ke datetime"
 
         mask = (mortalitas_df[year_col] >= year_start_dt) & (
             mortalitas_df[year_col] <= year_end_dt

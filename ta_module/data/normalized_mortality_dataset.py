@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from .mortality_dataset import MortalityDataset
 from pandas import DataFrame
 from torch import Tensor
+
+from .mortality_dataset import MortalityDataset
 
 
 class NormalizedMortalityDataset(MortalityDataset):
