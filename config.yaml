@@ -1,4 +1,5 @@
-mode: "tune"
+# Mode = "train" | "tune" | "inference"
+mode: "inference"
 
 seed: 42
 

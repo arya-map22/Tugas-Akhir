@@ -42,7 +42,9 @@ def eta_objective(
     )
 
     tuning_name = "tune_eta_regularization_loss"
-    trial_name = f"{tuning_name}_{eta:.0e}".replace("-", "_").replace("+", "")
+    trial_name = f"Trial_{trial.number}_eta_{eta:.0e}".replace("-", "_").replace(
+        "+", ""
+    )
     run_datetime = get_current_run_datetime_str()
 
     checkpoint_dir = checkpoint_dir / tuning_name / trial_name
@@ -68,6 +70,7 @@ def eta_objective(
         logger=[tensorboard_logger, csv_logger],
         callbacks=[model_checkpoint_cb],
         log_every_n_steps=1,
+        deterministic=True,
     )
 
     print("\n=====================================================================")

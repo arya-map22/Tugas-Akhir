@@ -3,16 +3,17 @@ from __future__ import annotations
 from math import ceil, floor
 from typing import Callable
 
-import torch
-from torch import Tensor, nn
+from torch import Tensor, rand, float32, einsum
+from torch.nn import Module, Parameter
+from torch.nn.functional import pad, unfold
 
 
-class LocallyConnected2D(nn.Module):
+class LocallyConnected2D(Module):
     def __init__(
         self,
         input_size: int | tuple[int, int],
         kernel_size: int,
-        activation_fn: nn.Module | Callable[[Tensor], Tensor],
+        activation_fn: Module | Callable[[Tensor], Tensor],
         stride: int = 1,
         dilation: int = 1,
         zero_padding: bool = False,
@@ -43,15 +44,11 @@ class LocallyConnected2D(nn.Module):
         )
 
         # Parameter model (dinamis)
-        self.weight = nn.Parameter(
-            data=torch.rand(
-                self.H_out, self.W_out, kernel_size, kernel_size, dtype=torch.float32
-            )
+        self.weight = Parameter(
+            data=rand(self.H_out, self.W_out, kernel_size, kernel_size, dtype=float32)
         )
         if bias:
-            self.bias = nn.Parameter(
-                data=torch.rand(self.H_out, self.W_out, dtype=torch.float32)
-            )
+            self.bias = Parameter(data=rand(self.H_out, self.W_out, dtype=float32))
         else:
             self.register_parameter("bias", None)
 
@@ -66,13 +63,13 @@ class LocallyConnected2D(nn.Module):
 
         # Tambahkan padding 0 di sisi luar x
         if self.pad > 0:
-            x = nn.functional.pad(
+            x = pad(
                 x, [ceil(self.pad), floor(self.pad), ceil(self.pad), floor(self.pad)]
             )
 
         # Membuat tensor untuk diproses oleh kernel
         # Dimensi tensor (N, k*k, H_out*W_out)
-        patches = nn.functional.unfold(x, kernel_size=k)
+        patches = unfold(x, kernel_size=k)
 
         # Ubah dimensi patches menjadi (N, k, k, H_out, W_out)
         patches = patches.view(N, k, k, self.H_out, self.W_out)
@@ -81,7 +78,7 @@ class LocallyConnected2D(nn.Module):
         # Dimensi weight (H_out, W_out, k, k): indeks (h, w, k, l)
         # Sum pada indeks k dan l
         # Output tensor punya dimensi (N, H_out, W_out)
-        y = torch.einsum("nklhw, hwkl -> nhw", patches, self.weight)
+        y = einsum("nklhw, hwkl -> nhw", patches, self.weight)
 
         # Tambahkan bias
         if self.bias is not None:
@@ -95,7 +92,7 @@ class LocallyConnected2D(nn.Module):
         cls: LocallyConnected2D,
         input_size: int | tuple[int, int],
         kernel_size: int,
-        activation_fn: nn.Module,
+        activation_fn: Module,
         stride: int = 1,
         dilation: int = 1,
         zero_padding: bool = False,

@@ -35,7 +35,7 @@ def eta_grid_search(
     result = TuningResult.model_validate(
         {
             "study_name": study_name,
-            "trials": study.trials_dataframe(),
+            "trials": study.trials_dataframe().to_dict(orient="list"),
             "best_params": study.best_params,
         }
     )

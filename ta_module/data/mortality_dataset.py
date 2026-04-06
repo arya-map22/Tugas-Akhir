@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import numpy as np
-import torch
+from torch import from_numpy
+from numpy import arange, float32
 from pandas import DataFrame
 from torch import Tensor
 from torch.utils.data import Dataset
@@ -43,21 +43,21 @@ class MortalityDataset(Dataset):
             raise IndexError(f"idx negatif hanya valid di [{-n}, 0)")
 
         x_ind = (
-            np.arange(idx, idx + l)
+            arange(idx, idx + l)
             if idx >= 0
-            else np.arange(n + idx * l - 1, n + idx * l + h - 1)
+            else arange(n + idx * l - 1, n + idx * l + h - 1)
         )
 
         y_ind = (
-            np.arange(idx + l, idx + l + h)
+            arange(idx + l, idx + l + h)
             if idx >= 0
-            else np.arange(n + (idx + 1) * l - 1, n + (idx + 1) * l + h - 1)
+            else arange(n + (idx + 1) * l - 1, n + (idx + 1) * l + h - 1)
         )
 
-        x = self.mortality_matrix.iloc[x_ind, :].to_numpy(copy=True, dtype=np.float32)
-        y = self.mortality_matrix.iloc[y_ind, :].to_numpy(copy=True, dtype=np.float32)
+        x = self.mortality_matrix.iloc[x_ind, :].to_numpy(copy=True, dtype=float32)
+        y = self.mortality_matrix.iloc[y_ind, :].to_numpy(copy=True, dtype=float32)
 
-        return torch.from_numpy(x), torch.from_numpy(y)
+        return from_numpy(x), from_numpy(y)
 
     @classmethod
     def factory(cls, lookback: int, horizon: int):
