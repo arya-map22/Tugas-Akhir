@@ -20,7 +20,9 @@ class DotEnv(BaseSettings):
     training_checkpoints_dir: Annotated[Path, _field]
 
     # File paths
-    last_run_metadata_file: Annotated[Path, _field]
+    last_tune_metadata_file: Annotated[Path, _field]
+    last_train_metadata_file: Annotated[Path, _field]
+
     config_file: Annotated[Path, _field]
 
     mortalitas_file: Annotated[Path, _field]

@@ -33,7 +33,6 @@ class Optimizer(BaseModel):
 
 
 class Regularization(BaseModel):
-    eta: Annotated[float, _field]
     alfa: Annotated[float, _field]
 
 
@@ -76,6 +75,7 @@ class DatasetConfig(BaseModel):
 
 # Config
 class ModeEnum(StrEnum):
+    TUNE = "tune"
     TRAIN = "train"
     INFERENCE = "inference"
 
@@ -94,6 +94,7 @@ class Config(BaseModel):
     dataset: Annotated[DatasetConfig, _field]
     training: Annotated[TrainingConfig, _field]
     model: Annotated[ModelConfig, _field]
+    regularization: Annotated[Regularization, _field]
     tuning: Annotated[Tuning, _field]
 
 

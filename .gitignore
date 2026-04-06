@@ -206,12 +206,14 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# Lightning logs
-logs/tensorboard/
-logs/csv/
+# Logs
+logs/
 
-# Model checkpoints
-best_model_checkpoints/
+# Checkpoints
+checkpoints/
+
+# Metadatas
+metadatas/
 
 # IDE files
 .idea/

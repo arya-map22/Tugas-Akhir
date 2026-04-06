@@ -1,11 +1,9 @@
-from datetime import datetime
 from pathlib import Path
 from typing import Callable, Iterator
-from zoneinfo import ZoneInfo
 
 from lightning import Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint
-from lightning.pytorch.loggers import TensorBoardLogger, CSVLogger
+from lightning.pytorch.loggers import CSVLogger, TensorBoardLogger
 from optuna import Trial
 from torch import Tensor
 from torch.nn import Module, Parameter
@@ -13,15 +11,15 @@ from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
 from ta_module.models import MyModel
-from ta_module.utils import RegularizationLoss, get_current_run_datetime
+from ta_module.utils import RegularizationLoss, get_current_run_datetime_str
 
 
-def l1_eta_mymodel_objective(
+def eta_objective(
     trial: Trial,
     model_factory: Callable[[], Module],
     train_loss: Module | Callable[[Tensor, Tensor], Tensor],
     eval_loss: Module | Callable[[Tensor, Tensor], Tensor],
-    lasso_loss_factory: Callable[
+    reg_loss_factory: Callable[
         [float, Callable[[], Iterator[Parameter]]], RegularizationLoss
     ],
     optimizer_factory: Callable[[Iterator[Parameter]], Optimizer],
@@ -40,12 +38,14 @@ def l1_eta_mymodel_objective(
         train_loss=train_loss,
         eval_loss=eval_loss,
         optimizer_factory=optimizer_factory,
-        regularization_loss=lasso_loss_factory(eta, lambda: model.parameters()),
+        regularization_loss=reg_loss_factory(eta, lambda: model.parameters()),
     )
 
-    run_datetime = get_current_run_datetime()
+    tuning_name = "tune_eta_regularization_loss"
+    trial_name = f"{tuning_name}_{eta:.0e}".replace("-", "_").replace("+", "")
+    run_datetime = get_current_run_datetime_str()
 
-    checkpoint_dir = checkpoint_dir / "l1_eta" / f"Trial_{trial.number}"
+    checkpoint_dir = checkpoint_dir / tuning_name / trial_name
     model_checkpoint_cb = ModelCheckpoint(
         dirpath=checkpoint_dir,
         filename=run_datetime,
@@ -54,15 +54,14 @@ def l1_eta_mymodel_objective(
         save_top_k=1,
     )
 
-    log_dir = log_dir / "l1_eta"
-    log_name = f"eta_{eta:.0e}".replace("-", "_").replace("+", "")
+    log_dir = log_dir / tuning_name
     tensorboard_logger = TensorBoardLogger(
         save_dir=log_dir,
-        name=log_name,
+        name=trial_name,
         version=run_datetime,
     )
 
-    csv_logger = CSVLogger(save_dir=log_dir, name=log_name, version=run_datetime)
+    csv_logger = CSVLogger(save_dir=log_dir, name=trial_name, version=run_datetime)
 
     trainer = Trainer(
         max_epochs=epochs,

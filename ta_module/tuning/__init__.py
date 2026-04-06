@@ -1,4 +1,5 @@
-from .grid_search import l1_eta_grid_search
-from .l1_eta_objective import l1_eta_mymodel_objective
+from .grid_search import eta_grid_search
+from .objective import eta_objective
+from .tuning_result import TuningResult
 
-__all__ = [l1_eta_mymodel_objective, l1_eta_grid_search]
+__all__ = [eta_objective, eta_grid_search, TuningResult]
