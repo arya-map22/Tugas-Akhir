@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Annotated
 
-from pydantic import Field, DirectoryPath, FilePath
+from pydantic import DirectoryPath, Field, FilePath
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _field = Field(frozen=True, repr=True)

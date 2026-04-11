@@ -1,12 +1,12 @@
 # Mode = "train" | "tune" | "inference"
-mode: "inference"
+mode: "tune"
 
 seed: 42
 
 split:
-  train: 0.8
-  validation: 0.1
-  test: 0.1
+  train: 0.7
+  validation: 0.15
+  test: 0.15
 
 data:
   mortalitas:
@@ -26,12 +26,23 @@ dataset:
 
 training:
   batch_size: 16
-  epochs: 500
+  min_epochs: 100
+  max_epochs: 500
+
   optimizer:
-    learning_rate: 1e-3
+    lr: 1e-2
+
+  lr_scheduler:
+    patience: 10
+    factor: 0.9
+    min_lr: 1e-6
 
   regularization:
     alfa: 1
+
+  early_stopping:
+    patience: 50
+    min_delta: 1e-3
 
 tuning:
   eta_candidates: [ 1e-6, 5e-6, 1e-5, 5e-5, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 0 ]

@@ -1,15 +1,15 @@
-from yaml import safe_load
-
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
+
 from pydantic import BaseModel, Field
+from yaml import safe_load
 
 from .data_config import DataConfig
-from .model_config import ModelConfig
-from .tuning_config import TuningConfig
 from .dataset_config import DatasetConfig
+from .model_config import ModelConfig
 from .training_config import TrainingConfig
+from .tuning_config import TuningConfig
 
 _field = Field(frozen=True, repr=True)
 

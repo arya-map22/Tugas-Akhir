@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from torch import from_numpy
 from numpy import arange, float32
 from pandas import DataFrame
-from torch import Tensor
+from torch import Tensor, from_numpy
 from torch.utils.data import Dataset
 
 

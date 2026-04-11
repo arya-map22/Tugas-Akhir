@@ -7,7 +7,7 @@ from torch import Tensor, nn
 from torch.nn import Parameter
 
 
-class RegularizationLoss(nn.Module):
+class ElasticNetRegularization(nn.Module):
     def __init__(
         self,
         # Koefisien untuk penalti regularisasi
@@ -20,7 +20,7 @@ class RegularizationLoss(nn.Module):
         model_weights_getter: Callable[[], Iterator[Parameter]],
         # epsilon digunakan untuk smoothing agar fungsi absolut
         # (dalam penalti l1) pada weight dapat diturunkan ketika = 0
-        l1_epsilon: float = 1e-6,
+        l1_epsilon: float = 1e-8,
     ):
         super().__init__()
         assert eta >= 0 and alfa >= 0 and l1_epsilon >= 0
@@ -35,7 +35,9 @@ class RegularizationLoss(nn.Module):
         assert pred.size() == target.size(), "ukuran pred dan target harus sama"
 
         model_weights = list(self.model_weights_getter())
-        l1_penalty = self._l1(model_weights=model_weights, epsilon=self.l1_epsilon)
+        l1_penalty = self._pseudo_huber_l1(
+            model_weights=model_weights, epsilon=self.l1_epsilon
+        )
         l2_penalty = self._l2(model_weights=model_weights)
 
         # Penalti regularisasi sesuai dengan rumus regularisasi ElasticNet
@@ -46,30 +48,30 @@ class RegularizationLoss(nn.Module):
         return regularization_loss
 
     @staticmethod
-    def _l1(model_weights: Collection[Parameter], epsilon: float = 1e-6) -> Tensor:
+    def _pseudo_huber_l1(
+        model_weights: Collection[Parameter], epsilon: float
+    ) -> Tensor:
         return sum(
-            (torch.sqrt(beta.pow(2).sum() + epsilon) for beta in model_weights),
+            [torch.sqrt(w.pow(2) + epsilon).sum() for w in model_weights],
             start=torch.tensor(0.0),
         )
 
     @staticmethod
     def _l2(model_weights: Collection[Parameter]) -> Tensor:
-        return sum(
-            (beta.pow(2).sum() for beta in model_weights), start=torch.tensor(0.0)
-        )
+        return sum([w.pow(2).sum() for w in model_weights], start=torch.tensor(0.0))
 
     @classmethod
     def factory(
-        cls: RegularizationLoss,
+        cls: ElasticNetRegularization,
         eta: float,
         alfa: float,
         l1_epsilon: float = 1e-6,
-    ) -> Callable[[Callable[[], Iterator[Parameter]]], RegularizationLoss]:
+    ) -> Callable[[Callable[[], Iterator[Parameter]]], ElasticNetRegularization]:
         def create(
             # digunakan untuk membuat RegularizationLoss terhadap parameter model lain
             # dengan parameter regularisasi yang sama
             model_weights_getter: Callable[[], Iterator[Parameter]],
-        ) -> RegularizationLoss:
+        ) -> ElasticNetRegularization:
             return cls(
                 eta=eta,
                 alfa=alfa,

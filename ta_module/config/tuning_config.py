@@ -1,4 +1,5 @@
 from typing import Annotated
+
 from pydantic import BaseModel, Field
 
 _field = Field(frozen=True, repr=True)

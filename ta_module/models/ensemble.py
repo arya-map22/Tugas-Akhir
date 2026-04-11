@@ -1,8 +1,8 @@
 from typing import Callable, Collection
 
-from torch import no_grad, stack, cat, Tensor
-from torch.nn import Module, ModuleList
 from lightning import LightningModule
+from torch import Tensor, cat, no_grad, stack
+from torch.nn import Module, ModuleList
 
 
 class EnsembleLocalGLMNet(Module):

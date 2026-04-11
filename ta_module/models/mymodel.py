@@ -9,18 +9,17 @@ class MyModel(L.LightningModule):
     def __init__(
         self,
         model: nn.Module,
-        train_loss: nn.Module | Callable[[Tensor, Tensor], Tensor],
-        eval_loss: nn.Module | Callable[[Tensor, Tensor], Tensor],
+        loss_metric: nn.Module | Callable[[Tensor, Tensor], Tensor],
+        eval_metric: nn.Module | Callable[[Tensor, Tensor], Tensor],
         # Pakai factory karena optimizer dan lr_scheduler harus dibuat di dalam configure_optimizers
         # Kalau passing objek jadi nanti params yang ketrack jadi ambigu
         # (bisa jadi tidak sesuai params model di model yang dibuat)
-        optimizer_factory: Callable[[Iterator[nn.Parameter]], torch.optim.Optimizer],
+        create_optimizer: Callable[[Iterator[nn.Parameter]], torch.optim.Optimizer],
         # Regularization untuk ditambahkan pada loss saat train
-        regularization_loss: nn.Module | Callable[[Tensor, Tensor], Tensor] = None,
-        lr_scheduler_factory: Callable[
+        regularization_term: nn.Module | Callable[[Tensor, Tensor], Tensor] = None,
+        create_lr_scheduler: Callable[
             [torch.optim.Optimizer], torch.optim.lr_scheduler.LRScheduler
         ] = None,
-        log_loss_scaling: int = 0,
     ):
         super().__init__()
         # Semua argumen dalam __init__ yang bukan tipe primitif harus ignore dalam save_hyperparameters
@@ -30,43 +29,40 @@ class MyModel(L.LightningModule):
                 "model",
                 "train_loss",
                 "eval_loss",
-                "regularization_loss",
-                "optimizer_factory",
-                "lr_scheduler_factory",
+                "regularization_term",
+                "create_optimizer",
+                "create_lr_scheduler",
             ]
         )
-
-        # Hyperparameter (statis)
-        # Digunakan untuk memberikan tampilan loss yang lebih readable (loss x 10^precision)
-        self.log_loss_scaling = log_loss_scaling
 
         # Model utama yang diwrap oleh LightningModule (dinamis)
         self.model = model
 
         # Loss pada tahapan train, validation, test
-        self.train_loss = train_loss
-        self.eval_loss = eval_loss
+        self.loss_metric = loss_metric
+        self.eval_metric = eval_metric
 
         # Loss untuk regularisasi pada proses train
-        self.regularization_loss = regularization_loss
+        self.regularization_term = regularization_term
 
         # Factory untuk membuat optimizer dan learning scheduler
-        self.optimizer_factory = optimizer_factory
-        self.lr_scheduler_factory = lr_scheduler_factory
+        self.create_optimizer = create_optimizer
+        self.create_lr_scheduler = create_lr_scheduler
 
         # Untuk avg train_loss dan val_loss di tensorboard plots
         self.train_losses = []
         self.train_regularized_losses = []
         self.val_losses = []
+        self.val_scores = []
 
     def configure_optimizers(self):
         # optimizer pasti tracking params pada objek model ini
-        optimizer = self.optimizer_factory(self.model.parameters())
-        if self.lr_scheduler_factory is not None:
+        optimizer = self.create_optimizer(self.model.parameters())
+        if self.create_lr_scheduler is not None:
             return {
                 "optimizer": optimizer,
                 "lr_scheduler": {
-                    "scheduler": self.lr_scheduler_factory(optimizer),
+                    "scheduler": self.create_lr_scheduler(optimizer),
                     "monitor": "val_loss",
                 },
             }
@@ -82,13 +78,13 @@ class MyModel(L.LightningModule):
         total_loss = 0.0
 
         # loss murni tanpa regularisasi
-        train_loss = self.train_loss(y_hat, y)
+        train_loss = self.loss_metric(y_hat, y)
         self.train_losses.append(train_loss.detach())
         total_loss += train_loss
 
-        if self.regularization_loss is not None:
+        if self.regularization_term is not None:
             # loss dengan regularisasi -> untuk optimisasi parameter
-            total_loss += self.regularization_loss(y_hat, y)
+            total_loss += self.regularization_term(y_hat, y)
             self.train_regularized_losses.append(total_loss.detach())
             # Log regularized_loss untuk memberi gambaran pengaruh regularisasi
             self.log(
@@ -96,26 +92,12 @@ class MyModel(L.LightningModule):
                 total_loss,
                 on_epoch=True,
                 on_step=True,
+                prog_bar=True,
             )
 
         # Log loss murni agar dapat diinterpretasi karena loss murni hanya dipengaruhi oleh data
         # Juga agar train_loss dan val_loss dapat dibandingkan untuk deteksi overfit
-        self.log(
-            f"train_loss",
-            train_loss,
-            on_step=True,
-            on_epoch=True,
-        )
-
-        # Tampilkan loss yang sudah discaled untuk memudahkan pengamatan
-        train_loss_scaled = train_loss * 10**self.log_loss_scaling
-        self.log(
-            f"train_loss_scaled (x10^{self.log_loss_scaling})",
-            train_loss_scaled,
-            on_epoch=True,
-            on_step=True,
-            prog_bar=True,
-        )
+        self.log(f"train_loss", train_loss, on_step=True, on_epoch=True, prog_bar=True)
 
         # Yang dipakai untuk optimisasi adalah total_loss
         return total_loss
@@ -126,10 +108,10 @@ class MyModel(L.LightningModule):
 
         writer = self.logger.experiment
         writer.add_scalars(
-            "Loss",
+            "Metrics",
             {
-                "train": avg_train_loss,
-                "train_regularized": avg_train_regularized_loss,
+                "train_loss": avg_train_loss,
+                "train_loss_regularized": avg_train_regularized_loss,
             },
             global_step=self.current_epoch,
         )
@@ -138,63 +120,39 @@ class MyModel(L.LightningModule):
 
     def validation_step(
         self, batch: Tensor, batch_idx: int, dataloader_idx: int = 0
-    ) -> Tensor:
+    ) -> None:
         x, y = batch
         y_hat = self.model(x)
-        val_loss = self.eval_loss(y_hat, y)
+        val_loss = self.loss_metric(y_hat, y)
         self.val_losses.append(val_loss.detach())
 
-        self.log(
-            f"val_loss",
-            val_loss,
-            on_step=True,
-            on_epoch=True,
-        )
+        self.log(f"val_loss", val_loss, on_step=True, on_epoch=True, prog_bar=True)
 
-        # Tampilkan loss yang sudah discaled untuk memudahkan pengamatan
-        val_loss_scaled = val_loss * 10**self.log_loss_scaling
-        self.log(
-            f"val_loss_scaled (x10^{self.log_loss_scaling})",
-            val_loss_scaled,
-            on_step=True,
-            on_epoch=True,
-            prog_bar=True,
-        )
-
-        return val_loss
+        val_metric = self.eval_metric(y_hat, y)
+        self.val_scores.append(val_metric.detach())
+        self.log(f"val_score", val_metric, on_step=True, on_epoch=True, prog_bar=True)
 
     def on_validation_epoch_end(self) -> None:
         avg_val_loss = torch.stack(self.val_losses).mean()
-
+        avg_val_score = torch.stack(self.val_scores).mean()
         writer = self.logger.experiment
         writer.add_scalars(
-            "Loss", {"val": avg_val_loss}, global_step=self.current_epoch
+            "Metrics",
+            {"val_loss": avg_val_loss, "val_score": avg_val_score},
+            global_step=self.current_epoch,
         )
         self.val_losses.clear()
+        self.val_scores.clear()
 
-    def test_step(
-        self, batch: Tensor, batch_idx: int, dataloader_idx: int = 0
-    ) -> Tensor:
+    def test_step(self, batch: Tensor, batch_idx: int, dataloader_idx: int = 0) -> None:
         x, y = batch
         y_hat = self.model(x)
-        test_loss = self.eval_loss(y_hat, y)
+        test_score = self.eval_metric(y_hat, y)
 
         self.log(
-            f"test_loss",
-            test_loss,
+            f"test_score",
+            test_score,
             on_step=True,
             on_epoch=True,
             prog_bar=True,
         )
-
-        # Tampilkan loss yang sudah discaled untuk memudahkan pengamatan
-        test_loss_scaled = test_loss * 10**self.log_loss_scaling
-        self.log(
-            f"test_loss_scaled (x10^{self.log_loss_scaling})",
-            test_loss_scaled,
-            on_step=True,
-            on_epoch=True,
-            prog_bar=True,
-        )
-
-        return test_loss

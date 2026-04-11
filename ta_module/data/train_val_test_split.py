@@ -1,3 +1,5 @@
+import math
+
 from pandas import DataFrame
 
 
@@ -10,7 +12,7 @@ def get_train_val_test_split(
     assert train_split > 0
     assert val_split >= 0
     assert test_split >= 0
-    assert train_split + val_split + test_split == 1
+    assert math.isclose(train_split + val_split + test_split, 1.0)
     assert train_split > val_split and train_split > test_split
 
     index = df.index
