@@ -3,9 +3,10 @@ from __future__ import annotations
 from math import ceil, floor
 from typing import Callable
 
-from torch import Tensor, einsum, float32, rand
+from torch import Tensor, einsum, float32, zeros
 from torch.nn import Module, Parameter
 from torch.nn.functional import pad, unfold
+from torch.nn.init import xavier_uniform_
 
 
 class LocallyConnected2D(Module):
@@ -45,10 +46,17 @@ class LocallyConnected2D(Module):
 
         # Parameter model (dinamis)
         self.weight = Parameter(
-            data=rand(self.H_out, self.W_out, kernel_size, kernel_size, dtype=float32)
+            data=zeros(
+                size=(self.H_out, self.W_out, kernel_size, kernel_size), dtype=float32
+            )
         )
+        # Inisialisasi weigh dengan glorot init
+        xavier_uniform_(self.weight)
+
         if bias:
-            self.bias = Parameter(data=rand(self.H_out, self.W_out, dtype=float32))
+            self.bias = Parameter(
+                data=zeros(size=(self.H_out, self.W_out), dtype=float32)
+            )
         else:
             self.register_parameter("bias", None)
 

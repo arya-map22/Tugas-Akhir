@@ -61,6 +61,7 @@ def eta_objective(
     trainer = Trainer(
         max_epochs=max_epochs,
         min_epochs=min_epochs,
+        gradient_clip_val=1.0,
         logger=[tensorboard_logger, csv_logger],
         callbacks=trainer_callbacks,
         log_every_n_steps=1,

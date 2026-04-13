@@ -16,7 +16,7 @@ class MyModel(L.LightningModule):
         # (bisa jadi tidak sesuai params model di model yang dibuat)
         create_optimizer: Callable[[Iterator[nn.Parameter]], torch.optim.Optimizer],
         # Regularization untuk ditambahkan pada loss saat train
-        regularization_term: nn.Module | Callable[[Tensor, Tensor], Tensor] = None,
+        regularization_term: nn.Module | Callable[[], Tensor] = None,
         create_lr_scheduler: Callable[
             [torch.optim.Optimizer], torch.optim.lr_scheduler.LRScheduler
         ] = None,
@@ -27,8 +27,8 @@ class MyModel(L.LightningModule):
         self.save_hyperparameters(
             ignore=[
                 "model",
-                "train_loss",
-                "eval_loss",
+                "loss_metric",
+                "eval_metric",
                 "regularization_term",
                 "create_optimizer",
                 "create_lr_scheduler",
@@ -84,37 +84,36 @@ class MyModel(L.LightningModule):
 
         if self.regularization_term is not None:
             # loss dengan regularisasi -> untuk optimisasi parameter
-            total_loss += self.regularization_term(y_hat, y)
+            total_loss += self.regularization_term()
             self.train_regularized_losses.append(total_loss.detach())
             # Log regularized_loss untuk memberi gambaran pengaruh regularisasi
             self.log(
                 "train_loss_regularized",
                 total_loss,
                 on_epoch=True,
-                on_step=True,
                 prog_bar=True,
             )
 
         # Log loss murni agar dapat diinterpretasi karena loss murni hanya dipengaruhi oleh data
         # Juga agar train_loss dan val_loss dapat dibandingkan untuk deteksi overfit
-        self.log(f"train_loss", train_loss, on_step=True, on_epoch=True, prog_bar=True)
+        self.log(f"train_loss", train_loss, on_epoch=True, prog_bar=True)
 
         # Yang dipakai untuk optimisasi adalah total_loss
         return total_loss
 
     def on_train_epoch_end(self) -> None:
         avg_train_loss = torch.stack(self.train_losses).mean()
-        avg_train_regularized_loss = torch.stack(self.train_regularized_losses).mean()
+        scalars = {"train_loss": avg_train_loss}
+
+        if self.train_regularized_losses:  # hanya kalau ada regularisasi
+            avg_train_regularized_loss = torch.stack(
+                self.train_regularized_losses
+            ).mean()
+            scalars["train_loss_regularized"] = avg_train_regularized_loss
 
         writer = self.logger.experiment
-        writer.add_scalars(
-            "Metrics",
-            {
-                "train_loss": avg_train_loss,
-                "train_loss_regularized": avg_train_regularized_loss,
-            },
-            global_step=self.current_epoch,
-        )
+        writer.add_scalars("Metrics", scalars, global_step=self.current_epoch)
+
         self.train_losses.clear()
         self.train_regularized_losses.clear()
 
@@ -125,12 +124,11 @@ class MyModel(L.LightningModule):
         y_hat = self.model(x)
         val_loss = self.loss_metric(y_hat, y)
         self.val_losses.append(val_loss.detach())
+        self.log(f"val_loss", val_loss, on_epoch=True, prog_bar=True)
 
-        self.log(f"val_loss", val_loss, on_step=True, on_epoch=True, prog_bar=True)
-
-        val_metric = self.eval_metric(y_hat, y)
-        self.val_scores.append(val_metric.detach())
-        self.log(f"val_score", val_metric, on_step=True, on_epoch=True, prog_bar=True)
+        val_score = self.eval_metric(y_hat, y)
+        self.val_scores.append(val_score.detach())
+        self.log(f"val_score", val_score, on_epoch=True, prog_bar=True)
 
     def on_validation_epoch_end(self) -> None:
         avg_val_loss = torch.stack(self.val_losses).mean()
@@ -152,7 +150,6 @@ class MyModel(L.LightningModule):
         self.log(
             f"test_score",
             test_score,
-            on_step=True,
             on_epoch=True,
             prog_bar=True,
         )

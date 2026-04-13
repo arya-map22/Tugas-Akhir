@@ -1,5 +1,5 @@
 # Mode = "train" | "tune" | "inference"
-mode: "tune"
+mode: "inference"
 
 seed: 42
 
@@ -26,23 +26,28 @@ dataset:
 
 training:
   batch_size: 16
-  min_epochs: 100
+  min_epochs: 0
   max_epochs: 500
 
+  # NAdam
   optimizer:
-    lr: 1e-2
+    lr: 2e-3
 
+  # Warm-up + CosineAnnealingWarmupRestart
   lr_scheduler:
-    patience: 10
-    factor: 0.9
-    min_lr: 1e-6
+    # Warm-up
+    warm_up_epochs: 5
+    start_factor: 1e-2
+    end_factor: 1.0
 
+    # CosineAnnealingWarmupRestart
+    T_0: 20
+    T_mult: 2
+    eta_min: 1e-5
+
+  # ElasticNet
   regularization:
     alfa: 1
-
-  early_stopping:
-    patience: 50
-    min_delta: 1e-3
 
 tuning:
   eta_candidates: [ 1e-6, 5e-6, 1e-5, 5e-5, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 0 ]

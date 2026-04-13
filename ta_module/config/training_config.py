@@ -11,18 +11,17 @@ class Optimizer(BaseModel):
 
 
 class LRScheduler(BaseModel):
-    patience: Annotated[int, _field]
-    factor: Annotated[float, _field]
-    min_lr: Annotated[float, _field]
+    warm_up_epochs: Annotated[int, _field]
+    start_factor: Annotated[float, _field]
+    end_factor: Annotated[float, _field]
+
+    T_0: Annotated[int, _field]
+    T_mult: Annotated[int, _field]
+    eta_min: Annotated[float, _field]
 
 
 class Regularization(BaseModel):
     alfa: Annotated[float, _field]
-
-
-class EarlyStopping(BaseModel):
-    patience: Annotated[int, _field]
-    min_delta: Annotated[float, _field]
 
 
 class TrainingConfig(BaseModel):
@@ -32,4 +31,3 @@ class TrainingConfig(BaseModel):
     optimizer: Annotated[Optimizer, _field]
     lr_scheduler: Annotated[LRScheduler, _field]
     regularization: Annotated[Regularization, _field]
-    early_stopping: Annotated[EarlyStopping, _field]

@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from typing import Callable
-
-import torch
-from torch import Tensor, nn
+from torch import Tensor, nn, zeros
 from torch.distributions.transforms import Transform
 
 
@@ -27,7 +25,7 @@ class LocalGLMnet(nn.Module):
 
         # Parameter model (dinamis)
         if bias:
-            self.bias = nn.Parameter(data=torch.rand(self.output_size))
+            self.bias = nn.Parameter(data=zeros(size=(self.output_size,)))
         else:
             self.register_parameter("bias", None)
 
