@@ -7,4 +7,4 @@ _field = Field(frozen=True, repr=True)
 
 # Tuning config
 class TuningConfig(BaseModel):
-    eta_candidates: Annotated[list[float], _field]
+    reg_coef_candidates: Annotated[list[float], _field]

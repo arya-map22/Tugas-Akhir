@@ -18,6 +18,7 @@ class DotEnv(BaseSettings):
     training_logs_dir: Annotated[DirectoryPath, _field]
     tuning_checkpoints_dir: Annotated[DirectoryPath, _field]
     training_checkpoints_dir: Annotated[DirectoryPath, _field]
+    results_dir: Annotated[DirectoryPath, _field]
 
     # File paths
     last_tune_metadata_file: Annotated[FilePath, _field]

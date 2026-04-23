@@ -13,25 +13,26 @@ from ta_module.utils import (
 )
 
 
-def eta_objective(
+def reg_coef_objective(
     trial: Trial,
-    create_my_model_with_eta: Callable[[float], MyModel],
+    create_my_model_with_reg_coef: Callable[[float], MyModel],
     train_dataloader: DataLoader,
     val_dataloader: DataLoader,
     max_epochs: int,
     log_dir: Path,
     checkpoint_dir: Path,
-    eta_candidates: list[float],
+    reg_coef_candidates: list[float],
     create_callbacks: Callable[[], list[Callback]] = None,
     min_epochs: int = 0,
+    gradient_clip_val: float | None = None,
 ) -> float:
-    eta = trial.suggest_categorical("eta", eta_candidates)
-    mymodel = create_my_model_with_eta(eta)
+    reg_coef = trial.suggest_categorical("reg_coef", reg_coef_candidates)
+    mymodel = create_my_model_with_reg_coef(reg_coef)
 
-    tuning_name = "tune_eta_regularization_loss"
-    trial_name = f"Trial_{trial.number}_eta_{eta:.0e}".replace("-", "_").replace(
-        "+", ""
-    )
+    tuning_name = "tune_reg_coef_elasticnet_regularization"
+    trial_name = f"Trial_{trial.number}_reg_coef_{reg_coef:.0e}".replace(
+        "-", "_"
+    ).replace("+", "")
 
     run_datetime = get_current_run_datetime_str()
 
@@ -61,7 +62,7 @@ def eta_objective(
     trainer = Trainer(
         max_epochs=max_epochs,
         min_epochs=min_epochs,
-        gradient_clip_val=1.0,
+        gradient_clip_val=gradient_clip_val,
         logger=[tensorboard_logger, csv_logger],
         callbacks=trainer_callbacks,
         log_every_n_steps=1,
@@ -69,7 +70,7 @@ def eta_objective(
     )
 
     print("\n=====================================================================")
-    print(f"Trial {trial.number}; eta = {eta:.0e}:")
+    print(f"Trial {trial.number}; reg_coef = {reg_coef:.0e}:")
     print("=====================================================================\n")
     trainer.fit(
         model=mymodel,

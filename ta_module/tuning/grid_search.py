@@ -7,20 +7,20 @@ from ta_module.utils import get_current_run_datetime_str
 from .tuning_result import TuningResult
 
 
-def eta_grid_search(
+def reg_coef_grid_search(
     objective_fn: Callable[[Trial], float],
-    eta_candidates: Sequence[float],
+    reg_coef_candidates: Sequence[float],
     storage: str,
     seed: int = 42,
 ) -> TuningResult:
-    assert all(x >= 0 for x in eta_candidates)
+    assert all(x >= 0 for x in reg_coef_candidates)
 
     run_datetime = get_current_run_datetime_str()
-    study_name = f"eta_grid_search_{run_datetime}"
+    study_name = f"reg_coef_grid_search_{run_datetime}"
     study = optuna.create_study(
         direction="minimize",
         sampler=optuna.samplers.GridSampler(
-            search_space={"eta": eta_candidates}, seed=seed
+            search_space={"reg_coef": reg_coef_candidates}, seed=seed
         ),
         storage=storage,
         study_name=study_name,
@@ -28,7 +28,7 @@ def eta_grid_search(
 
     study.optimize(
         objective_fn,
-        n_trials=len(eta_candidates),
+        n_trials=len(reg_coef_candidates),
         show_progress_bar=True,
     )
 

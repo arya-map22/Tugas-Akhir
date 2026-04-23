@@ -3,20 +3,23 @@ from __future__ import annotations
 from pandas import DataFrame
 from torch import Tensor
 
+from ta_module.utils import normalize
 from .mortality_dataset import MortalityDataset
 
 
 class NormalizedMortalityDataset(MortalityDataset):
     def __init__(
         self,
-        mortality_matrix: DataFrame,
+        mortality_matrix: Tensor,
         lookback: int,
         horizon: int,
         mean: Tensor,
         std: Tensor,
     ):
         super().__init__(
-            mortality_matrix=mortality_matrix, lookback=lookback, horizon=horizon
+            mortality_matrix=mortality_matrix,
+            lookback=lookback,
+            horizon=horizon,
         )
 
         # mean dan std dihitung terhadap kolom (per usia)
@@ -26,10 +29,9 @@ class NormalizedMortalityDataset(MortalityDataset):
 
     def __getitem__(self, idx: int) -> tuple[Tensor, Tensor]:
         x, y = super().__getitem__(idx)
-        x_normalized = (x - self.mean) / self.std
-        y_normalized = (y - self.mean) / self.std
+        x_normalized = normalize(x, self.mean, self.std)
 
-        return x_normalized, y_normalized
+        return x_normalized, y
 
     @classmethod
     def factory(

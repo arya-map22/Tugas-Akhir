@@ -55,6 +55,9 @@ class MyModel(L.LightningModule):
         self.val_losses = []
         self.val_scores = []
 
+    def forward(self, x: Tensor) -> Tensor:
+        return self.model(x)
+
     def configure_optimizers(self):
         # optimizer pasti tracking params pada objek model ini
         optimizer = self.create_optimizer(self.model.parameters())

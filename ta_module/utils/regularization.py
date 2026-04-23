@@ -11,23 +11,23 @@ class ElasticNetRegularizationTerm(nn.Module):
     def __init__(
         self,
         # Koefisien untuk penalti regularisasi
-        eta: float,
-        # alfa = 0 -> ridge loss
-        # alfa = 1 -> lasso loss
-        alfa: float,
+        reg_coef: float,
+        # alpha = 0 -> ridge loss
+        # alpha = 1 -> lasso loss
+        alpha: float,
         # Pakai getter agar nilai weights yang digunakan pasti
         # nilai weights terkini dari model yang ingin diregularisasi
         model_weights_getter: Callable[[], Iterator[Parameter]],
         # epsilon digunakan untuk smoothing agar fungsi absolut
         # (dalam penalti l1) pada weight dapat diturunkan ketika = 0
-        l1_epsilon: float = 1e-8,
+        l1_epsilon: float = 1e-6,
     ):
         super().__init__()
-        assert eta >= 0 and alfa >= 0 and l1_epsilon >= 0
-        assert 0 <= alfa <= 1, "alfa harus di range [0, 1]"
+        assert reg_coef >= 0 and alpha >= 0 and l1_epsilon >= 0
+        assert 0 <= alpha <= 1, "alpha harus di range [0, 1]"
 
-        self.eta = eta
-        self.alfa = alfa
+        self.reg_coef = reg_coef
+        self.alpha = alpha
         self.model_weights_getter = model_weights_getter
         self.l1_epsilon = l1_epsilon
 
@@ -39,8 +39,8 @@ class ElasticNetRegularizationTerm(nn.Module):
         l2_penalty = self._l2(model_weights=model_weights)
 
         # Penalti regularisasi sesuai dengan rumus regularisasi ElasticNet
-        regularization_loss = self.eta * (
-            (1 - self.alfa) * l2_penalty + self.alfa * l1_penalty
+        regularization_loss = self.reg_coef * (
+            (1 - self.alpha) * l2_penalty + self.alpha * l1_penalty
         )
 
         return regularization_loss
@@ -58,8 +58,8 @@ class ElasticNetRegularizationTerm(nn.Module):
     @classmethod
     def factory(
         cls: ElasticNetRegularizationTerm,
-        eta: float,
-        alfa: float,
+        reg_coef: float,
+        alpha: float,
         l1_epsilon: float = 1e-8,
     ) -> Callable[[Callable[[], Iterator[Parameter]]], ElasticNetRegularizationTerm]:
         def create(
@@ -68,8 +68,8 @@ class ElasticNetRegularizationTerm(nn.Module):
             model_weights_getter: Callable[[], Iterator[Parameter]],
         ) -> ElasticNetRegularizationTerm:
             return cls(
-                eta=eta,
-                alfa=alfa,
+                reg_coef=reg_coef,
+                alpha=alpha,
                 model_weights_getter=model_weights_getter,
                 l1_epsilon=l1_epsilon,
             )

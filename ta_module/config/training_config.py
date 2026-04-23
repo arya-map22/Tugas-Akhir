@@ -11,17 +11,20 @@ class Optimizer(BaseModel):
 
 
 class LRScheduler(BaseModel):
-    warm_up_epochs: Annotated[int, _field]
+    # LinearLR
     start_factor: Annotated[float, _field]
     end_factor: Annotated[float, _field]
+    total_iters: Annotated[int, _field]
 
+    # CosineAnnealingWarmRestarts
     T_0: Annotated[int, _field]
     T_mult: Annotated[int, _field]
     eta_min: Annotated[float, _field]
 
 
 class Regularization(BaseModel):
-    alfa: Annotated[float, _field]
+    alpha: Annotated[float, _field]
+    gradient_clip_val: Annotated[float, _field]
 
 
 class TrainingConfig(BaseModel):

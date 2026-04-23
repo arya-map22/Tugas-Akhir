@@ -221,3 +221,6 @@ metadatas/
 
 # All hidden folders
 .*/
+
+# Result folder
+results/

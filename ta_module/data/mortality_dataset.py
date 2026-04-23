@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from numpy import arange, float32
-from pandas import DataFrame
-from torch import Tensor, from_numpy
+from numpy import arange
+from torch import Tensor
 from torch.utils.data import Dataset
 
 
@@ -16,16 +15,18 @@ class MortalityDataset(Dataset):
 
     def __init__(
         self,
-        mortality_matrix: DataFrame,
+        mortality_matrix: Tensor,
         lookback: int,
         horizon: int,
     ):
+        assert mortality_matrix.dim() == 2
+
         self.mortality_matrix = mortality_matrix
         self.lookback = lookback
         self.horizon = horizon
 
     def __len__(self):
-        n = len(self.mortality_matrix) - self.lookback - self.horizon + 1
+        n = self.mortality_matrix.shape[0] - self.lookback - self.horizon + 1
         assert n >= 0
 
         return n
@@ -35,32 +36,26 @@ class MortalityDataset(Dataset):
         l = self.lookback
         h = self.horizon
 
-        if idx > 0 and idx >= n:
-            raise IndexError(f"idx positif hanya valid di [{0}, {n})")
+        # handle negative index (Python style)
+        if idx < 0:
+            idx = n + idx
 
-        if idx < 0 and -idx > n:
-            raise IndexError(f"idx negatif hanya valid di [{-n}, 0)")
+        # validasi index
+        if idx < 0 or idx >= n:
+            raise IndexError(f"idx hanya valid di [{-n}, {n})")
 
-        x_ind = (
-            arange(idx, idx + l)
-            if idx >= 0
-            else arange(n + idx * l - 1, n + idx * l + h - 1)
-        )
+        # ambil index window
+        x_ind = arange(idx, idx + l)
+        y_ind = arange(idx + l, idx + l + h)
 
-        y_ind = (
-            arange(idx + l, idx + l + h)
-            if idx >= 0
-            else arange(n + (idx + 1) * l - 1, n + (idx + 1) * l + h - 1)
-        )
+        x = self.mortality_matrix[x_ind, :]
+        y = self.mortality_matrix[y_ind, :]
 
-        x = self.mortality_matrix.iloc[x_ind, :].to_numpy(copy=True, dtype=float32)
-        y = self.mortality_matrix.iloc[y_ind, :].to_numpy(copy=True, dtype=float32)
-
-        return from_numpy(x), from_numpy(y)
+        return x, y
 
     @classmethod
     def factory(cls, lookback: int, horizon: int):
-        def create(mortality_matrix: DataFrame) -> MortalityDataset:
+        def create(mortality_matrix: Tensor) -> MortalityDataset:
             return cls(
                 mortality_matrix=mortality_matrix,
                 lookback=lookback,

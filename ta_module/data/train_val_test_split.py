@@ -1,22 +1,22 @@
 import math
 
-from pandas import DataFrame
+from torch import Tensor
 
 
 def get_train_val_test_split(
-    df: DataFrame,
+    mortality_matrix: Tensor,
     train_split: float,
     val_split: float,
     test_split: float,
-) -> tuple[DataFrame, DataFrame, DataFrame]:
+) -> tuple[Tensor, Tensor, Tensor]:
     assert train_split > 0
     assert val_split >= 0
     assert test_split >= 0
     assert math.isclose(train_split + val_split + test_split, 1.0)
     assert train_split > val_split and train_split > test_split
+    assert mortality_matrix.dim() == 2
 
-    index = df.index
-    n = len(index)
+    n = mortality_matrix.shape[0]
 
     train_size = int(train_split * n)
     val_size = int(val_split * n)
@@ -38,8 +38,12 @@ def get_train_val_test_split(
     assert n == (train_size + val_size + test_size)
     assert remainder == 0
 
-    train_ind = index[:train_size]
-    val_ind = index[train_size : train_size + val_size]
-    test_ind = index[train_size + val_size :]
+    train_ind = range(train_size)
+    val_ind = range(train_size, train_size + val_size)
+    test_ind = range(train_size + val_size, n)
 
-    return df.loc[train_ind, :], df.loc[val_ind, :], df.loc[test_ind, :]
+    return (
+        mortality_matrix[train_ind, :],
+        mortality_matrix[val_ind, :],
+        mortality_matrix[test_ind, :],
+    )
