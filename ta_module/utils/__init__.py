@@ -5,6 +5,7 @@ from .regularization import ElasticNetRegularizationTerm
 from .residual_bootstrap import recursive_forecast_with_residual_bootstrap
 from .run_datetime import get_current_run_datetime, get_current_run_datetime_str
 from .scaled_logit_transform import ScaledLogitTransform
+from .inverse_transform_sampling import inverse_transform_sampling
 
 __all__ = [
     ElasticNetRegularizationTerm,
@@ -17,4 +18,5 @@ __all__ = [
     get_current_run_datetime,
     recursive_forecast_with_residual_bootstrap,
     ScaledLogitTransform,
+    inverse_transform_sampling,
 ]

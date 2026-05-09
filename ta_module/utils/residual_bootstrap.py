@@ -4,8 +4,6 @@ import torch
 from torch import Tensor
 from torch.nn import Module
 
-from ta_module.utils import normalize
-
 
 @torch.no_grad()
 def recursive_forecast_with_residual_bootstrap(
@@ -14,66 +12,45 @@ def recursive_forecast_with_residual_bootstrap(
     residuals: Tensor,  # (N, 1, W)
     forecast_horizon: int,
     n_sim: int,
-    normalize_mean: Tensor,
-    normalize_std: Tensor,
-    device: str,
 ) -> Tensor:
     """
-    Output:
-        Tensor dengan shape (B, H, W)
-        B = n_sim
-        H = forecast_horizon
-        W = jumlah fitur
+    Recursive multi-step forecast dengan wild bootstrap (Mammen).
+    Output: Tensor shape (n_sim, H, W).
     """
+    device = x.device
+    model = model.to(device)
 
-    assert x.dim() == 3
+    assert x.dim() == 3 and x.shape[0] == 1
     assert residuals.dim() == 3
 
-    # 🔹 repeat initial window
-    x_in = x.repeat(n_sim, 1, 1).to(device)  # (B, L, W)
+    N, _, W = residuals.shape
 
-    # 🔹 wild bootstrap multipliers
-    v = torch.tensor(
-        [(1 + sqrt(5)) / 2, (1 - sqrt(5)) / 2],
-        device=device,
-    )
+    # Mammen constants
+    _s5 = sqrt(5)
+    a = -(_s5 - 1) / 2
+    b = (_s5 + 1) / 2
+    p_b = (_s5 - 1) / (2 * _s5)
 
-    prob_v = torch.tensor(
-        [(sqrt(5) - 1) / (2 * sqrt(5)), (sqrt(5) + 1) / (2 * sqrt(5))],
-        device=device,
-    )
+    residuals = residuals.to(device)
+    ab = torch.tensor([a, b], device=device)
 
+    x_in = x.repeat(n_sim, 1, 1)
+    # Kumpulkan sebagai list, cat sekali di akhir
+    # untuk hindari OOM dari pre-alokasi (n_sim, H, W)
     predictions = []
 
-    N = residuals.shape[0]
+    for i in range(forecast_horizon):
+        print(f"Forecasting step {i + 1}/{forecast_horizon}...")
+        # Random per-step: hanya (n_sim,) dan (n_sim, 1, 1) — kecil
+        idx = torch.randint(0, N, (n_sim,), device=device)
+        mask = torch.bernoulli(torch.full((n_sim, 1, 1), p_b, device=device)).bool()
 
-    for _ in range(forecast_horizon):
-        # 🔹 model prediction
-        y_t = model(x_in)  # (B, 1, W)
+        sampled = residuals[idx]  # (n_sim, 1, W)
+        wild_w = ab[mask.long()]  # (n_sim, 1, 1)
 
-        # 🔹 sample residual index (GPU)
-        idx = torch.randint(
-            low=0,
-            high=N,
-            size=(n_sim,),
-            device=device,
-        )
-        sampled_residuals = residuals[idx]  # (B, 1, W)
+        y_t = model(x_in) + sampled * wild_w  # (n_sim, 1, W)
+        predictions.append(y_t)
 
-        # 🔹 sample wild multiplier (GPU)
-        v_idx = torch.multinomial(prob_v, num_samples=n_sim, replacement=True)
-        sampled_v = v[v_idx].view(-1, 1, 1)  # (B, 1, 1)
+        x_in = torch.cat([x_in[:, 1:, :], y_t], dim=1)
 
-        # 🔹 apply bootstrap
-        y_t_res = y_t + sampled_residuals * sampled_v  # (B, 1, W)
-        y_t_res = normalize(y_t_res, normalize_mean, normalize_std)
-
-        # 🔹 update rolling window
-        x_in = torch.cat([x_in[:, 1:, :], y_t_res], dim=1)  # (B, L, W)
-
-        predictions.append(y_t_res)
-
-    # 🔹 (B, H, W)
-    predictions = torch.cat(predictions, dim=1)
-
-    return predictions.to(device)
+    return torch.cat(predictions, dim=1)  # (n_sim, H, W)

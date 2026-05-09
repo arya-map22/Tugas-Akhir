@@ -15,7 +15,6 @@ class LocallyConnected2D(Module):
         input_size: int | tuple[int, int],
         filter_size: int,
         activation_fn: Module | Callable[[Tensor], Tensor],
-        device: str,
         stride: int = 1,
         dilation: int = 1,
         zero_padding: bool = False,
@@ -29,7 +28,6 @@ class LocallyConnected2D(Module):
         self.filter_size = filter_size
         self.zero_padding = zero_padding
         self.activation_fn = activation_fn
-        self.device = device
 
         if isinstance(input_size, int):
             self.H_in, self.W_in = (input_size, input_size)
@@ -51,20 +49,19 @@ class LocallyConnected2D(Module):
             data=zeros(
                 size=(self.H_out, self.W_out, filter_size, filter_size), dtype=float32
             )
-        ).to(self.device)
+        )
         # Inisialisasi weigh dengan glorot init
         xavier_uniform_(self.weight)
 
         if bias:
             self.bias = Parameter(
                 data=zeros(size=(self.H_out, self.W_out), dtype=float32)
-            ).to(self.device)
+            )
         else:
             self.register_parameter("bias", None)
 
     def forward(self, x: Tensor) -> Tensor:
         assert x.dim() == 3
-        x = x.to(self.device)
 
         N = x.size(0)
         k = self.filter_size
@@ -96,7 +93,7 @@ class LocallyConnected2D(Module):
             # Ubah dimensi bias menjadi (N, H_out, W_out) sebelum dijumlahkan
             y = y + self.bias.unsqueeze(0).expand(N, -1, -1)
 
-        return self.activation_fn(y).to(self.device)
+        return self.activation_fn(y)
 
     @classmethod
     def factory(
@@ -104,7 +101,6 @@ class LocallyConnected2D(Module):
         input_size: int | tuple[int, int],
         kernel_size: int,
         activation_fn: Module,
-        device: str,
         stride: int = 1,
         dilation: int = 1,
         zero_padding: bool = False,
@@ -115,7 +111,6 @@ class LocallyConnected2D(Module):
                 input_size,
                 kernel_size,
                 activation_fn,
-                device,
                 stride,
                 dilation,
                 zero_padding,

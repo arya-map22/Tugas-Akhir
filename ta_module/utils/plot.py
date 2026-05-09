@@ -11,7 +11,7 @@ def plot_usia_vs_tahun(
     mortalitas_df: DataFrame,
     age_col: str,
     year_col: str,
-    sex_col: str,
+    gender_col: str,
     mortality_col: str,
     age_start: int,
     age_end: int,
@@ -30,7 +30,7 @@ def plot_usia_vs_tahun(
     g = sns.FacetGrid(
         mortalitas_df[mask],
         col=age_col,
-        hue=sex_col,
+        hue=gender_col,
         height=6,
         col_wrap=4,
         sharex=False,
@@ -57,7 +57,7 @@ def plot_tahun_vs_usia(
     mortalitas_df: DataFrame,
     age_col: str,
     year_col: str,
-    sex_col: str,
+    gender_col: str,
     mortality_col: str,
     year_start: str | datetime,
     year_end: str | datetime,
@@ -108,7 +108,7 @@ def plot_tahun_vs_usia(
     g = sns.FacetGrid(
         df[mask],
         col="Year Only",
-        hue=sex_col,
+        hue=gender_col,
         height=6,
         col_wrap=4,
         sharex=False,
@@ -140,15 +140,15 @@ def plot_mortalitas_statdesc(df: DataFrame, plots_dir: Path):
 
     # ── Plot 1: Mean ───────────────────────────────────────────────────────────────
     ax = axes[0]
-    for sex, colors in palette.items():
-        d = df[df["sex"] == sex]
+    for gender, colors in palette.items():
+        d = df[df["gender"] == gender]
         sns.lineplot(
             data=d,
             x="age",
             y="mean",
             color=colors["line"],
             linewidth=2.5,
-            label=sex,
+            label=gender,
             ax=ax,
         )
     ax.set_title("Mean", fontsize=13, fontweight="bold")
@@ -159,15 +159,15 @@ def plot_mortalitas_statdesc(df: DataFrame, plots_dir: Path):
 
     # ── Plot 2: Std ────────────────────────────────────────────────────────────────
     ax = axes[1]
-    for sex, colors in palette.items():
-        d = df[df["sex"] == sex]
+    for gender, colors in palette.items():
+        d = df[df["gender"] == gender]
         sns.lineplot(
             data=d,
             x="age",
             y="std",
             color=colors["line"],
             linewidth=2.5,
-            label=sex,
+            label=gender,
             ax=ax,
         )
     ax.set_title("Std Dev", fontsize=13, fontweight="bold")
@@ -177,9 +177,9 @@ def plot_mortalitas_statdesc(df: DataFrame, plots_dir: Path):
     ax.grid(True, linestyle="--", alpha=0.4)
 
     # ── Plot 3 & 4: Min–Median–Max, terpisah per jenis kelamin ────────────────────
-    for i, (sex, colors) in enumerate(palette.items()):
+    for i, (gender, colors) in enumerate(palette.items()):
         ax = axes[2 + i]
-        d = df[df["sex"] == sex]
+        d = df[df["gender"] == gender]
         ax.fill_between(
             d["age"],
             d["min"],
@@ -215,7 +215,7 @@ def plot_mortalitas_statdesc(df: DataFrame, plots_dir: Path):
             label="Median",
             ax=ax,
         )
-        ax.set_title(f"Min – Median – Max ({sex})", fontsize=13, fontweight="bold")
+        ax.set_title(f"Min – Median – Max ({gender})", fontsize=13, fontweight="bold")
         ax.set_xlabel("Umur (tahun)")
         ax.set_ylabel("Nilai Mortalitas")
         ax.legend(fontsize=9)

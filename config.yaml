@@ -1,5 +1,5 @@
 # Mode = "train" | "tune" | "inference"
-mode: "tune"
+mode: "inference"
 
 seed: 42
 
@@ -13,7 +13,7 @@ data:
     year_col: "year"
     date_format: "%Y"
     age_col: "age"
-    sex_col: "sex"
+    gender_col: "gender"
     mortality_col: "mortality_rate"
 
   bi_rate:
@@ -31,12 +31,12 @@ training:
 
   # NAdam
   optimizer:
-    lr: 5e-2
+    lr: 5e-3
 
   # LinearLR + CosineAnnealingWarmRestarts
   lr_scheduler:
     # LinearLR
-    start_factor: 1e-4
+    start_factor: 1e-3
     end_factor: 1.0
     total_iters: 5
 

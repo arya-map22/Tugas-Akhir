@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pandas import DataFrame
 from torch import Tensor
 
 from ta_module.utils import normalize
@@ -30,8 +29,9 @@ class NormalizedMortalityDataset(MortalityDataset):
     def __getitem__(self, idx: int) -> tuple[Tensor, Tensor]:
         x, y = super().__getitem__(idx)
         x_normalized = normalize(x, self.mean, self.std)
+        y_normalized = normalize(y, self.mean, self.std)
 
-        return x_normalized, y
+        return x_normalized, y_normalized
 
     @classmethod
     def factory(
@@ -42,7 +42,7 @@ class NormalizedMortalityDataset(MortalityDataset):
         mean: Tensor = None,
         std: Tensor = None,
     ):
-        def create(mortality_matrix: DataFrame) -> NormalizedMortalityDataset:
+        def create(mortality_matrix: Tensor) -> NormalizedMortalityDataset:
             assert mean is not None and std is not None
 
             return cls(

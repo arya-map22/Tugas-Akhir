@@ -10,7 +10,7 @@ class Mortalitas(BaseModel):
     year_col: Annotated[str, _field]
     date_format: Annotated[str, _field]
     age_col: Annotated[str, _field]
-    sex_col: Annotated[str, _field]
+    gender_col: Annotated[str, _field]
     mortality_col: Annotated[str, _field]
 
 

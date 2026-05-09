@@ -18,13 +18,13 @@ class ScaledLogitTransform(Transform):
 
     def _inverse(self, eta: torch.Tensor) -> torch.Tensor:
         """
-        Inverse link: eta -> x in (lb, ub)
+        Inverse link: eta in R -> x in (lb, ub)
         """
         return self.lb + (self.ub - self.lb) * torch.sigmoid(eta)
 
     def _call(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Link function: x in (lb, ub) -> eta
+        Link function: x in (lb, ub) -> eta in R
         η = log((x - lb) / (ub - x))
         """
         x = torch.clamp(x, self.lb + self.eps, self.ub - self.eps)
