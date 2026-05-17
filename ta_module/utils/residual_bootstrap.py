@@ -54,3 +54,32 @@ def recursive_forecast_with_residual_bootstrap(
         x_in = torch.cat([x_in[:, 1:, :], y_t], dim=1)
 
     return torch.cat(predictions, dim=1)  # (n_sim, H, W)
+
+
+@torch.no_grad()
+def recursive_forecast(
+    model: Module,
+    x: Tensor,  # (1, L, W)
+    forecast_horizon: int,
+    n_sim: int,
+) -> Tensor:
+    """
+    Recursive multi-step forecast.
+    Output: Tensor shape (n_sim, H, W).
+    """
+    device = x.device
+    model = model.to(device)
+    assert x.dim() == 3 and x.shape[0] == 1
+    x_in = x.repeat(n_sim, 1, 1)
+    # Kumpulkan sebagai list, cat sekali di akhir
+    # untuk hindari OOM dari pre-alokasi (n_sim, H, W)
+    predictions = []
+
+    for i in range(forecast_horizon):
+        print(f"Forecasting step {i + 1}/{forecast_horizon}...")
+        y_t = model(x_in)
+        predictions.append(y_t)
+
+        x_in = torch.cat([x_in[:, 1:, :], y_t], dim=1)
+
+    return torch.cat(predictions, dim=1)  # (n_sim, H, W)

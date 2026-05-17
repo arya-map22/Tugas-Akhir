@@ -7,7 +7,7 @@ from lightning.pytorch.loggers import CSVLogger, TensorBoardLogger
 from optuna import Trial
 from torch.utils.data import DataLoader
 
-from ta_module.models import MyModel
+from ta_module.models import ModelLightning
 from ta_module.utils import (
     get_current_run_datetime_str,
 )
@@ -15,7 +15,7 @@ from ta_module.utils import (
 
 def reg_coef_objective(
     trial: Trial,
-    create_my_model_with_reg_coef: Callable[[float], MyModel],
+    create_my_model_with_reg_coef: Callable[[float], ModelLightning],
     train_dataloader: DataLoader,
     val_dataloader: DataLoader,
     max_epochs: int,

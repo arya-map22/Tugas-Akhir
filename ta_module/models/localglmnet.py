@@ -16,7 +16,6 @@ class LocalGLMnet(nn.Module):
         bias: bool = True,
     ):
         super().__init__()
-
         # Hyperparameter (statis)
         self.input_size = input_size
         self.output_size = input_size[1]
@@ -55,12 +54,15 @@ class LocalGLMnet(nn.Module):
         # self.bias punya dimensi (W)
         # self.bias akan dibroadcast menjadi (N, W)
         # y punya dimensi (N, W)
-        y: Tensor = w_hadamard_x.sum(dim=1) + self.bias
+        if self.bias is not None:
+            y: Tensor = w_hadamard_x.sum(dim=1) + self.bias
+        else:
+            y: Tensor = w_hadamard_x.sum(dim=1)
 
         # Ubah dimensi y menjadi (N, 1, W) agar konsisten dengan MortalityDataset
         y = y.unsqueeze(1)
 
-        return self.link_fn(y)
+        return self.link_fn.inv(y)
 
     def get_regression_attention(self, x: Tensor) -> Tensor:
         return self.regression_attention_model(x).detach()
@@ -69,6 +71,7 @@ class LocalGLMnet(nn.Module):
     def factory(
         cls: LocalGLMnet,
         input_size: tuple[int, int],
+        link_fn: Transform,
         bias: bool = True,
     ) -> Callable[[nn.Module], LocalGLMnet]:
         def create(
@@ -79,6 +82,7 @@ class LocalGLMnet(nn.Module):
             return cls(
                 input_size=input_size,
                 regression_attention_model=regression_attention_model,
+                link_fn=link_fn,
                 bias=bias,
             )
 
@@ -86,14 +90,32 @@ class LocalGLMnet(nn.Module):
 
 
 class EnsembleLocalGLMNet(nn.Module):
-    def __init__(self, models: Collection[LocalGLMnet] | nn.ModuleList) -> None:
+    def __init__(
+        self,
+        models: Collection[LocalGLMnet],
+        weight_per_model: Collection[float] | None = None,
+    ) -> None:
         assert all(isinstance(m, LocalGLMnet) for m in models)
+
+        if weight_per_model is not None:
+            assert sum(weight_per_model) == 1.0
+            assert len(models) == len(weight_per_model)
+
+            self.weight_per_model = weight_per_model
+        else:
+            self.weight_per_model = [1.0 / len(models) for _ in range(len(models))]
 
         super().__init__()
         self.models = nn.ModuleList(models)
 
     def forward(self, x: Tensor) -> Tensor:
         assert x.dim() == 3
-        y = torch.stack([model(x) for model in self.models]).mean(dim=0)
+
+        y = [
+            self.weight_per_model[i] * self.models[i](x)
+            for i in range(len(self.models))
+        ]
+        y = torch.stack(y, dim=0)
+        y = torch.sum(y, dim=0)
 
         return y

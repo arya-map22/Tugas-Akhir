@@ -5,7 +5,7 @@ import torch
 from torch import Tensor, nn
 
 
-class MyModel(L.LightningModule):
+class ModelLightning(L.LightningModule):
     def __init__(
         self,
         model: nn.Module,
@@ -16,10 +16,11 @@ class MyModel(L.LightningModule):
         # (bisa jadi tidak sesuai params model di model yang dibuat)
         create_optimizer: Callable[[Iterator[nn.Parameter]], torch.optim.Optimizer],
         # Regularization untuk ditambahkan pada loss saat train
-        regularization_term: nn.Module | Callable[[], Tensor] = None,
-        create_lr_scheduler: Callable[
-            [torch.optim.Optimizer], torch.optim.lr_scheduler.LRScheduler
-        ] = None,
+        regularization_term: nn.Module | Callable[[], Tensor] | None = None,
+        create_lr_scheduler: (
+            Callable[[torch.optim.Optimizer], torch.optim.lr_scheduler.LRScheduler]
+            | None
+        ) = None,
     ):
         super().__init__()
         # Semua argumen dalam __init__ yang bukan tipe primitif harus ignore dalam save_hyperparameters
