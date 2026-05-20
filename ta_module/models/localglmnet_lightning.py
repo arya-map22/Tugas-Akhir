@@ -2,13 +2,16 @@ from typing import Callable, Iterator
 
 import lightning as L
 import torch
+
 from torch import Tensor, nn
+from ta_module.utils import recursive_forecast
+from .localglmnet import LocalGLMnet
 
 
-class ModelLightning(L.LightningModule):
+class LocalGLMnetLightning(L.LightningModule):
     def __init__(
         self,
-        model: nn.Module,
+        model: LocalGLMnet,
         loss_metric: nn.Module | Callable[[Tensor, Tensor], Tensor],
         eval_metric: nn.Module | Callable[[Tensor, Tensor], Tensor],
         # Pakai factory karena optimizer dan lr_scheduler harus dibuat di dalam configure_optimizers
@@ -125,7 +128,15 @@ class ModelLightning(L.LightningModule):
         self, batch: Tensor, batch_idx: int, dataloader_idx: int = 0
     ) -> None:
         x, y = batch
-        y_hat = self.model(x)
+
+        x = x[:1, :, :]
+        h = y.shape[0]
+
+        y_hat = recursive_forecast(
+            model=self.model, x=x, forecast_horizon=h, n_sim=1
+        )  # shape (1, H, W)
+        y_hat = y_hat.permute(1, 0, 2)  # shape (H, 1, W) sama dengan y
+
         val_loss = self.loss_metric(y_hat, y)
         self.val_losses.append(val_loss.detach())
         self.log(f"val_loss", val_loss, on_epoch=True, prog_bar=True)
@@ -148,7 +159,15 @@ class ModelLightning(L.LightningModule):
 
     def test_step(self, batch: Tensor, batch_idx: int, dataloader_idx: int = 0) -> None:
         x, y = batch
-        y_hat = self.model(x)
+
+        x = x[:1, :, :]
+        h = y.shape[0]
+
+        y_hat = recursive_forecast(
+            model=self.model, x=x, forecast_horizon=h, n_sim=1
+        )  # shape (1, H, W)
+        y_hat = y_hat.permute(1, 0, 2)  # shape (H, 1, W) sama dengan y
+
         test_score = self.eval_metric(y_hat, y)
 
         self.log(

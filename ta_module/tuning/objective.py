@@ -1,13 +1,13 @@
 from pathlib import Path
 from typing import Callable
 
-from lightning import Trainer
+from lightning import Trainer, seed_everything
 from lightning.pytorch.callbacks import Callback, ModelCheckpoint
 from lightning.pytorch.loggers import CSVLogger, TensorBoardLogger
 from optuna import Trial
 from torch.utils.data import DataLoader
 
-from ta_module.models import ModelLightning
+from ta_module.models import LocalGLMnetLightning
 from ta_module.utils import (
     get_current_run_datetime_str,
 )
@@ -15,17 +15,20 @@ from ta_module.utils import (
 
 def reg_coef_objective(
     trial: Trial,
-    create_my_model_with_reg_coef: Callable[[float], ModelLightning],
+    create_my_model_with_reg_coef: Callable[[float], LocalGLMnetLightning],
     train_dataloader: DataLoader,
     val_dataloader: DataLoader,
     max_epochs: int,
     log_dir: Path,
     checkpoint_dir: Path,
     reg_coef_candidates: list[float],
+    seed: int,
     create_callbacks: Callable[[], list[Callback]] = None,
     min_epochs: int = 0,
     gradient_clip_val: float | None = None,
 ) -> float:
+    seed_everything(seed=seed, workers=True)
+
     reg_coef = trial.suggest_categorical("reg_coef", reg_coef_candidates)
     mymodel = create_my_model_with_reg_coef(reg_coef)
 
