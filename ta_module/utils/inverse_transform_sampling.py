@@ -12,7 +12,7 @@ def inverse_transform_sampling(x: Tensor, cdf: Tensor) -> Tensor:
     device = cdf.device
     sample_shape = list(x.shape)
     sample_shape[-1] = 1
-    U = uniform_dist.sample(sample_shape=sample_shape).to(device)
+    U = uniform_dist.sample(sample_shape=sample_shape).to(torch.float16).to(device)
     indices = torch.searchsorted(sorted_sequence=cdf, input=U)
 
     return torch.gather(input=x, dim=-1, index=indices)

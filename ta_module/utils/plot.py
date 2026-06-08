@@ -44,11 +44,6 @@ def plot_usia_vs_tahun(
 
     g.map_dataframe(sns.lineplot, x=year_col, y=mortality_col)
 
-    g.figure.suptitle(
-        "Mortalitas per Tahun untuk Setiap Kelompok Usia",
-        fontsize=16,
-        fontweight="bold",
-    )
     g.set_titles("Age {col_name}", fontsize=12)
     g.set_axis_labels(year_col, "Mortality Rate")
     g.add_legend()
@@ -125,9 +120,6 @@ def plot_tahun_vs_usia(
 
     g.map_dataframe(sns.lineplot, x=age_col, y=mortality_col)
 
-    g.figure.suptitle(
-        "Mortalitas per Usia untuk Setiap Tahun", fontsize=16, fontweight="bold"
-    )
     g.set_titles("Year {col_name}", fontsize=12)
     g.set_axis_labels("Age", "Mortality Rate")
     g.add_legend()
@@ -137,56 +129,64 @@ def plot_tahun_vs_usia(
     print(f"Plot {plot_name} saved to {file_path}")
 
 
-def plot_mortalitas_statdesc(df: DataFrame, plots_dir: Path):
-    filepath = plots_dir / "line_plot_mortalitas_statdesc.png"
-    palette = {
-        "Female": {"line": "#c0394b", "band": "#e07b8a"},
-        "Male": {"line": "#1a5fa8", "band": "#5a8fcb"},
-    }
+def plot_mean_std(
+    df: DataFrame,
+    plots_dir: Path,
+    palette: dict | None = None,
+) -> None:
+    filepath = plots_dir / "line_plot_mortalitas_mean_std.png"
+    if palette is None:
+        palette = {
+            "Female": {"line": "#c0394b", "band": "#e07b8a"},
+            "Male": {"line": "#1a5fa8", "band": "#5a8fcb"},
+        }
 
-    fig, axes = plt.subplots(1, 4, figsize=(22, 5))
+    fig, axes = plt.subplots(1, 2, figsize=(11, 5))
 
-    # ── Plot 1: Mean ───────────────────────────────────────────────────────────────
-    ax = axes[0]
-    for gender, colors in palette.items():
-        d = df[df["gender"] == gender]
-        sns.lineplot(
-            data=d,
-            x="age",
-            y="mean",
-            color=colors["line"],
-            linewidth=2.5,
-            label=gender,
-            ax=ax,
-        )
-    ax.set_title("Mean", fontsize=13, fontweight="bold")
-    ax.set_xlabel("Umur (tahun)")
-    ax.set_ylabel("Nilai Mortalitas")
-    ax.legend(title="Jenis Kelamin")
-    ax.grid(True, linestyle="--", alpha=0.4)
+    stat_cfg = [("mean", "Mean"), ("std", "Std Dev")]
+    for ax, (col, title) in zip(axes, stat_cfg):
+        for gender, colors in palette.items():
+            d = df[df["gender"] == gender]
+            sns.lineplot(
+                data=d,
+                x="age",
+                y=col,
+                color=colors["line"],
+                linewidth=2.5,
+                label=gender,
+                ax=ax,
+            )
+        ax.set_title(title, fontsize=13, fontweight="bold")
+        ax.set_xlabel("Umur (tahun)")
+        ax.set_ylabel("Nilai Mortalitas")
+        ax.legend(title="Jenis Kelamin")
+        ax.grid(True, linestyle="--", alpha=0.4)
 
-    # ── Plot 2: Std ────────────────────────────────────────────────────────────────
-    ax = axes[1]
-    for gender, colors in palette.items():
-        d = df[df["gender"] == gender]
-        sns.lineplot(
-            data=d,
-            x="age",
-            y="std",
-            color=colors["line"],
-            linewidth=2.5,
-            label=gender,
-            ax=ax,
-        )
-    ax.set_title("Std Dev", fontsize=13, fontweight="bold")
-    ax.set_xlabel("Umur (tahun)")
-    ax.set_ylabel("Nilai Mortalitas")
-    ax.legend(title="Jenis Kelamin")
-    ax.grid(True, linestyle="--", alpha=0.4)
+    fig.suptitle(
+        "Mean dan Std Dev Mortalitas per Umur dan Jenis Kelamin",
+        fontsize=14,
+        fontweight="bold",
+    )
+    plt.tight_layout()
+    plt.savefig(filepath, dpi=150, bbox_inches="tight")
+    print("Berhasil tersimpan!")
 
-    # ── Plot 3 & 4: Min–Median–Max, terpisah per jenis kelamin ────────────────────
-    for i, (gender, colors) in enumerate(palette.items()):
-        ax = axes[2 + i]
+
+def plot_min_med_max(
+    df: DataFrame,
+    plots_dir: Path,
+    palette: dict | None = None,
+) -> None:
+    filepath = plots_dir / "line_plot_mortalitas_min_med_max.png"
+    if palette is None:
+        palette = {
+            "Female": {"line": "#c0394b", "band": "#e07b8a"},
+            "Male": {"line": "#1a5fa8", "band": "#5a8fcb"},
+        }
+
+    fig, axes = plt.subplots(1, 2, figsize=(11, 5))
+
+    for ax, (gender, colors) in zip(axes, palette.items()):
         d = df[df["gender"] == gender]
         ax.fill_between(
             d["age"],
@@ -196,33 +196,17 @@ def plot_mortalitas_statdesc(df: DataFrame, plots_dir: Path):
             alpha=0.25,
             label="Min–Max",
         )
-        sns.lineplot(
-            data=d,
-            x="age",
-            y="min",
-            color=colors["line"],
-            linewidth=1,
-            linestyle=":",
-            ax=ax,
-        )
-        sns.lineplot(
-            data=d,
-            x="age",
-            y="max",
-            color=colors["line"],
-            linewidth=1,
-            linestyle=":",
-            ax=ax,
-        )
-        sns.lineplot(
-            data=d,
-            x="age",
-            y="median",
-            color=colors["line"],
-            linewidth=2.5,
-            label="Median",
-            ax=ax,
-        )
+        for col, lw, ls in [("min", 1, ":"), ("max", 1, ":"), ("median", 2.5, "-")]:
+            sns.lineplot(
+                data=d,
+                x="age",
+                y=col,
+                color=colors["line"],
+                linewidth=lw,
+                linestyle=ls,
+                label=("Median" if col == "median" else "_nolegend_"),
+                ax=ax,
+            )
         ax.set_title(f"Min – Median – Max ({gender})", fontsize=13, fontweight="bold")
         ax.set_xlabel("Umur (tahun)")
         ax.set_ylabel("Nilai Mortalitas")
@@ -230,7 +214,7 @@ def plot_mortalitas_statdesc(df: DataFrame, plots_dir: Path):
         ax.grid(True, linestyle="--", alpha=0.4)
 
     fig.suptitle(
-        "Statistika Deskriptif Mortalitas per Umur dan Jenis Kelamin",
+        "Min – Median – Max Mortalitas per Umur dan Jenis Kelamin",
         fontsize=14,
         fontweight="bold",
     )
