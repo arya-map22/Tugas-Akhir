@@ -43,7 +43,7 @@ def compute_kpx_table_from_xstart_dynamic(
     kpx = torch.cat([torch.ones(X_sub, 1, device=device), kpx], dim=1)
 
     # kpx shape (X_sub, K + 1)
-    return kpx.to(torch.float16)
+    return kpx.to(torch.float32)
 
 
 def compute_kpx_table_from_xstart_static(p: torch.Tensor, x_start: int, max_k: int):
@@ -87,14 +87,14 @@ def compute_kpx_table_from_xstart_static(p: torch.Tensor, x_start: int, max_k: i
     kpx = torch.cat([torch.ones(X_sub, 1, device=device), kpx], dim=1)
 
     # kpx shape (X_sub, K + 1)
-    return kpx.to(torch.float16)
+    return kpx.to(torch.float32)
 
 
 def compute_fractional_m_kpx(kpx: torch.Tensor, s: int, m: int) -> torch.Tensor:
     assert s >= 0
     assert m > 0
     max_k = kpx.shape[-1] - 1
-    kpx = kpx.to(torch.float16)
+    kpx = kpx.to(torch.float32)
 
     if s == 0:
         return kpx[..., 0]
